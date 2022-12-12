@@ -142,6 +142,7 @@ class RedExplorer extends Explorer {
   // > called at the creation of the agent
   //
   void setup() {
+    //pouet
   }
 
   //
