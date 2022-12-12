@@ -104,7 +104,7 @@ float burgerDecay = 0.1;
 int seedCost = 20;
 int maxSeeds = 5;
 int maturationTime = 1000;
-int maturationCrush;
+int maturationCrush = 100;
 
 // walls parameters
 int wallCost = 100;
