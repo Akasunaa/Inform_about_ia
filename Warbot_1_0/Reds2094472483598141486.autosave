@@ -360,41 +360,42 @@ class RedHarvester extends Harvester {
     if (brain[1].z == 0) {
       // Harvester is out of the coalition
       
-       Base base = (Base)minDist(myBases);
+      // go back to base if harvester is too far
+      Base base = (Base)minDist(myBases);
       if (base != null) {
       // if there is one
       if (distance(base) > basePerception + harvesterPerception) {
-        goBackToBase();
+         goBackToBase();
       }
         
-        // if food to deposit or too few energy
+      // if food to deposit or too few energy
       if ((carryingFood > 200) || (energy < 100))
         // time to go back to the base
         brain[4].x = 1;
   
-      // if in "go back" state
-      if (brain[4].x == 1) {
-        // go back to the base
-        goBackToBase();
-  
-        // if enough energy and food
-        if ((energy > 100) && (carryingFood > 100)) {
-          // check for closest base
-          Base bob = (Base)minDist(myBases);
-          if (bob != null) {
-            // if there is one and the harvester is in the sphere of perception of the base
-            if (distance(bob) < basePerception)
-              // plant one burger as a seed to produce new ones
-              plantSeed();
-          }
+      // if enough energy and food
+      if ((energy > 100) && (carryingFood > 100)) {
+        // check for closest base
+        Base bob = (Base)minDist(myBases);
+        if (bob != null) {
+          // if there is one and the harvester is in the sphere of perception of the base
+          if (distance(bob) < basePerception)
+            // plant one burger as a seed to produce new ones
+            plantSeed();
         }
-      } else
+      }
+    } else
         // if not in the "go back" state, explore and collect food
         goAndEat();
-    } else if (brain[1].z == 1) {
+  } else if (brain[1].z == 1) {
       // Harvester is in a the coalition
       
-    }
+  }
+    
+     // if in "go back" state
+    if (brain[4].x == 1) {
+    // go back to the base
+    goBackToBase();
   }
 }
 
@@ -572,15 +573,18 @@ class RedRocketLauncher extends RocketLauncher {
     if ((energy < 100) || (bullets == 0))
       // go back to the base
       brain[4].x = 1;
+    else 
+      brain[4].x = 0;
 
     if (brain[1].x == 0) {
-      // rocket laucnher is out of a coalition
+      // rocket launcher is out of the coalition
       Base base = (Base)minDist(myBases);
-      if (distance(base) > basePerception + explorerPerception) {
-        goBackToBase();
+      if (base != null) {
+        if (distance(base) > basePerception + explorerPerception) {
+          goBackToBase();
+        }
       }
-    }
-    
+
     if (brain[4].x == 1) {
       // if in "go back to base" mode
       goBackToBase();
@@ -596,6 +600,7 @@ class RedRocketLauncher extends RocketLauncher {
         randomMove(45);
     }
   }
+}
 
   //
   // selectTarget
