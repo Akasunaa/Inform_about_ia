@@ -336,6 +336,9 @@ class RedHarvester extends Harvester {
   // > called at the creation of the agent
   //
   void setup() {
+    Base base = (Base)minDist(myBases);
+    brain[4].x = base.pos.x;
+    brain[4].y = base.pos.y;
   }
 
   //
@@ -353,32 +356,47 @@ class RedHarvester extends Harvester {
     if ((b != null) && (distance(b) <= 2))
       // if one is found next to the robot, collect it
       takeFood(b);
-
-    // if food to deposit or too few energy
-    if ((carryingFood > 200) || (energy < 100))
-      // time to go back to the base
-      brain[4].x = 1;
-
-    // if in "go back" state
-    if (brain[4].x == 1) {
-      // go back to the base
-      goBackToBase();
-
-      // if enough energy and food
-      if ((energy > 100) && (carryingFood > 100)) {
-        // check for closest base
-        Base bob = (Base)minDist(myBases);
-        if (bob != null) {
-          // if there is one and the harvester is in the sphere of perception of the base
-          if (distance(bob) < basePerception)
-            // plant one burger as a seed to produce new ones
-            plantSeed();
-        }
+    
+    if (brain[1].z == 0) {
+      // Harvester is out of the coalition
+      
+       Base base = (Base)minDist(myBases);
+      if (base != null) {
+      // if there is one
+      if (distance(base) > basePerception + harvesterPerception) {
+        goBackToBase();
       }
-    } else
-      // if not in the "go back" state, explore and collect food
-      goAndEat();
+        
+        // if food to deposit or too few energy
+      if ((carryingFood > 200) || (energy < 100))
+        // time to go back to the base
+        brain[4].x = 1;
+  
+      // if in "go back" state
+      if (brain[4].x == 1) {
+        // go back to the base
+        goBackToBase();
+  
+        // if enough energy and food
+        if ((energy > 100) && (carryingFood > 100)) {
+          // check for closest base
+          Base bob = (Base)minDist(myBases);
+          if (bob != null) {
+            // if there is one and the harvester is in the sphere of perception of the base
+            if (distance(bob) < basePerception)
+              // plant one burger as a seed to produce new ones
+              plantSeed();
+          }
+        }
+      } else
+        // if not in the "go back" state, explore and collect food
+        goAndEat();
+    } else if (brain[1].z == 1) {
+      // Harvester is in a the coalition
+      
+    }
   }
+}
 
   //
   // goBackToBase
