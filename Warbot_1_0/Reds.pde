@@ -126,6 +126,7 @@ class RedBase extends Base {
 //   4.y = (0 = no target | 1 = locked target)
 //   0.x / 0.y = coordinates of the target
 //   0.z = type of the target
+//   1.z = if in a coalition
 ///////////////////////////////////////////////////////////////////////////
 class RedExplorer extends Explorer {
   //
@@ -157,12 +158,30 @@ class RedExplorer extends Explorer {
       brain[4].x = 1;
 
     // depending on the state of the robot
-    if (brain[4].x == 1) {
-      // go back to base...
-      goBackToBase();
-    } else {
-      // ...or explore randomly
-      randomMove(45);
+    if(brain[1].z==1) //COALITION BEHAVIOR
+    {
+      //In coalition, the explorer will attempt to locate enemies, by classing them in priority, and then transmit that target to the team's rocket launchers
+      LocateEnemy();
+      if(brain[4].y == 1) //if a target has been set, we set the target in the team's rocket brain[2] directly (SHOULD BE REWORKED AS MESSAGE)
+      {
+        ArrayList<RocketLauncher> rockets = (ArrayList<RocketLauncher>)perceiveRobots(friend,LAUNCHER); //RIGHT NOW, we assume that all rockets in vicinity are part of the team -> should include a way to either directly communicate, or see if they are indeed part of the team
+        for(int i=0;i<rockets.size();i++)
+        {
+          rockets.get(i).brain[2].z=1;
+          rockets.get(i).brain[2].x = brain[0].x;
+          rockets.get(i).brain[2].y = brain[0].y;
+        }
+      }
+    }
+    else //STANDALONE BEHAVIOR
+    {
+      if (brain[4].x == 1) {
+        // go back to base...
+        goBackToBase();
+      } else {
+        // ...or explore randomly
+        randomMove(45);
+      }
     }
 
     // tries to localize ennemy bases
@@ -176,6 +195,27 @@ class RedExplorer extends Explorer {
     flushMessages();
   }
 
+
+  //
+  // LocateEnemy
+  // ============
+  // > try to localize an enemy target
+  //
+  void LocateEnemy() {
+    // look for the closest ennemy robot
+    Robot bob = (Robot)minDist(perceiveRobots(ennemy));
+    if (bob != null) {
+      // if one found, record the position and breed of the target
+      brain[0].x = bob.pos.x;
+      brain[0].y = bob.pos.y;
+      brain[0].z = bob.breed;
+      // locks the target
+      brain[4].y = 1;
+    } else
+      // no target found
+      brain[4].y = 0;
+  }
+  
   //
   // setTarget
   // =========
@@ -524,6 +564,8 @@ class RedHarvester extends Harvester {
 //   0.z = breed of the target
 //   1.z = if in squad (0 if no, 1 if yes)
 //   1.x / 1.y = position of leader
+//   2.x / 2.y = position of target found by explorer
+//   2.z = (0 = no target found by explorer | 1 = target found by explorer)
 //   4.x = (0 = look for target | 1 = go back to base) 
 //   4.y = (0 = no target | 1 = localized target)
 //   5.x / 5.y = position of the base that created it
@@ -566,10 +608,17 @@ class RedRocketLauncher extends RocketLauncher {
     {
       FindExplorer();
       FollowLeader(); //the rocket will attempt to follow leader
-      selectTarget(); //after following leader, it tries to find a suitable target -> Later, this should be changed as the explorer finding a target
-      if(target())
+      if(brain[2].z==1) //if a target's been found by the leader, the rocket attacks it
       {
-        launchBullet(towards(brain[0]));
+        launchBullet(towards(brain[2]));
+      }
+      else //if no target given by explorer, rockets look for one themselves
+      {
+        selectTarget(); //after following leader, it tries to find a suitable target -> Later, this should be changed as the explorer finding a target
+        if(target())
+        {
+          launchBullet(towards(brain[0]));
+        }
       }
     } 
     else //STANDARD ALONE BEHAVIOR
