@@ -566,7 +566,11 @@ class RedRocketLauncher extends RocketLauncher {
     {
       FindExplorer();
       FollowLeader(); //the rocket will attempt to follow leader
-      
+      selectTarget(); //after following leader, it tries to find a suitable target -> Later, this should be changed as the explorer finding a target
+      if(target())
+      {
+        launchBullet(towards(brain[0]));
+      }
     } 
     else //STANDARD ALONE BEHAVIOR
     {
@@ -693,11 +697,18 @@ class RedRocketLauncher extends RocketLauncher {
   void FollowLeader(){
     if(brain[1]!=null)
     {
+       brain[1].x-=3; //small offset, might be removed
+       brain[1].y-=3;
        heading = towards(brain[1]);
     }
     tryToMoveTowardLeader();
   }
   
+  //
+  //  FindExplorer
+  //  ============
+  //  > try to find suitable leader
+  //
   void FindExplorer(){
     Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
       if(explorer!=null) //right now, we only test if explorer exists, not wether or not it's in squad
