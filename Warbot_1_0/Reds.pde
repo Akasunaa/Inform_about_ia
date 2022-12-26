@@ -142,7 +142,6 @@ class RedExplorer extends Explorer {
   // > called at the creation of the agent
   //
   void setup() {
-    //pouet
   }
 
   //
@@ -523,8 +522,11 @@ class RedHarvester extends Harvester {
 // map of the brain:
 //   0.x / 0.y = position of the target
 //   0.z = breed of the target
+//   1.z = if in squad (0 if no, 1 if yes)
+//   1.x / 1.y = position of leader
 //   4.x = (0 = look for target | 1 = go back to base) 
 //   4.y = (0 = no target | 1 = localized target)
+//   5.x / 5.y = position of the base that created it
 ///////////////////////////////////////////////////////////////////////////
 class RedRocketLauncher extends RocketLauncher {
   //
@@ -555,19 +557,46 @@ class RedRocketLauncher extends RocketLauncher {
       // go back to the base
       brain[4].x = 1;
 
-    if (brain[4].x == 1) {
+    if (brain[4].x == 1) 
+    {
       // if in "go back to base" mode
       goBackToBase();
-    } else {
+    } 
+    else if(brain[1].z==1) //SQUAD BEHAVIOR
+    {
+      FindExplorer();
+      FollowLeader(); //the rocket will attempt to follow leader
+      selectTarget(); //after following leader, it tries to find a suitable target -> Later, this should be changed as the explorer finding a target
+      if(target())
+      {
+        launchBullet(towards(brain[0]));
+      }
+    } 
+    else //STANDARD ALONE BEHAVIOR
+    {
+      // try to find a suitable coalition leader :
+      Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
+      if(explorer!=null) //right now, we only test if explorer exists, not wether or not it's in squad
+      {
+        brain[1].x = explorer.pos.x;
+        brain[1].y = explorer.pos.y;
+        brain[1].z = 1;
+        return;
+      }
       // try to find a target
       selectTarget();
       // if target identified
       if (target())
+      {
         // shoot on the target
         launchBullet(towards(brain[0]));
+      }
       else
+      {
         // else explore randomly
         randomMove(45);
+      }
+        
     }
   }
 
@@ -647,5 +676,48 @@ class RedRocketLauncher extends RocketLauncher {
     // if there is no obstacle ahead, move forward at full speed
     if (freeAhead(speed))
       forward(speed);
+  }
+  
+  //
+  // tryToMoveTowardLeader
+  // ================
+  // > try to move towards the leader after having checked that no obstacle is in front - if something is in front, it will just remain here
+  //
+  void tryToMoveTowardLeader() {
+    // if there is no obstacle ahead, move forward at full speed
+    if (freeAhead(speed))
+      forward(speed);
+  }
+  
+  //
+  //  FollowLeader
+  //  ============
+  //  > try to follow leader
+  //
+  void FollowLeader(){
+    if(brain[1]!=null)
+    {
+       brain[1].x-=3; //small offset, might be removed
+       brain[1].y-=3;
+       heading = towards(brain[1]);
+    }
+    tryToMoveTowardLeader();
+  }
+  
+  //
+  //  FindExplorer
+  //  ============
+  //  > try to find suitable leader
+  //
+  void FindExplorer(){
+    Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
+      if(explorer!=null) //right now, we only test if explorer exists, not wether or not it's in squad
+      {
+        brain[1].x = explorer.pos.x;
+        brain[1].y = explorer.pos.y;
+        brain[1].z = 1;
+        explorer.speed = launcherSpeed;
+        explorer.brain[1].z = 1;
+      }
   }
 }
