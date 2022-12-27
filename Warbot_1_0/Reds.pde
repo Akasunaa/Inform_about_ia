@@ -162,14 +162,17 @@ class RedExplorer extends Explorer {
     {
       //In coalition, the explorer will attempt to locate enemies, by classing them in priority, and then transmit that target to the team's rocket launchers
       LocateEnemy();
-      if(brain[4].y == 1) //if a target has been set, we set the target in the team's rocket brain[2] directly (SHOULD BE REWORKED AS MESSAGE)
+      if(brain[4].y == 1) //if a target has been set, we do not move to give rockets time to attack
       {
-        ArrayList<RocketLauncher> rockets = (ArrayList<RocketLauncher>)perceiveRobots(friend,LAUNCHER); //RIGHT NOW, we assume that all rockets in vicinity are part of the team -> should include a way to either directly communicate, or see if they are indeed part of the team
-        for(int i=0;i<rockets.size();i++)
-        {
-          rockets.get(i).brain[2].z=1;
-          rockets.get(i).brain[2].x = brain[0].x;
-          rockets.get(i).brain[2].y = brain[0].y;
+        
+      }
+      else{ //if no target found, we perform standard behavior
+        if (brain[4].x == 1) {
+          // go back to base...
+          goBackToBase();
+        } else {
+          // ...or explore randomly
+          randomMove(45);
         }
       }
     }
@@ -211,9 +214,45 @@ class RedExplorer extends Explorer {
       brain[0].z = bob.breed;
       // locks the target
       brain[4].y = 1;
+      //sends message to rockets
+      TransmitTargetToTeam(bob);
     } else
       // no target found
       brain[4].y = 0;
+      TransmitTargetToTeam(null);
+  }
+  
+  //
+  // TransmitTargetToTeam
+  // ====================
+  // > transmit to every rocket in team the target selected by LocateEnemy()
+  //
+  void TransmitTargetToTeam(Robot target)
+  {
+    if(target!=null)
+    {
+      ArrayList<RocketLauncher> rockets = (ArrayList<RocketLauncher>)perceiveRobots(friend,LAUNCHER); //RIGHT NOW, we assume that all rockets in vicinity are part of the team -> should include a way to either directly communicate, or see if they are indeed part of the team
+      if(rockets!=null){
+        for(int i=0;i<rockets.size();i++)
+        {
+          informAboutTarget(rockets.get(i),target);
+          //rockets.get(i).brain[2].z=1;
+        }
+      }
+    }
+    else //if no target found, we tell the rockets that they have no target
+    {
+      ArrayList<RocketLauncher> rockets = (ArrayList<RocketLauncher>)perceiveRobots(friend,LAUNCHER); //RIGHT NOW, we assume that all rockets in vicinity are part of the team -> should include a way to either directly communicate, or see if they are indeed part of the team
+      if(rockets!=null)
+      {
+        for(int i=0;i<rockets.size();i++)
+        {
+          //informAboutTarget(rockets.get(i),null);
+          rockets.get(i).brain[4].y=0;
+        }
+      }
+    }
+    
   }
   
   //
@@ -564,8 +603,6 @@ class RedHarvester extends Harvester {
 //   0.z = breed of the target
 //   1.z = if in squad (0 if no, 1 if yes)
 //   1.x / 1.y = position of leader
-//   2.x / 2.y = position of target found by explorer
-//   2.z = (0 = no target found by explorer | 1 = target found by explorer)
 //   4.x = (0 = look for target | 1 = go back to base) 
 //   4.y = (0 = no target | 1 = localized target)
 //   5.x / 5.y = position of the base that created it
@@ -607,13 +644,13 @@ class RedRocketLauncher extends RocketLauncher {
     else if(brain[1].z==1) //SQUAD BEHAVIOR
     {
       FindExplorer();
-      FollowLeader(); //the rocket will attempt to follow leader
-      if(brain[2].z==1) //if a target's been found by the leader, the rocket attacks it
+      if(brain[4].y==1) //if a target's been found by the leader, the rocket attacks it
       {
-        launchBullet(towards(brain[2]));
+        launchBullet(towards(brain[0]));
       }
       else //if no target given by explorer, rockets look for one themselves
       {
+        FollowLeader(); //the rocket will attempt to follow leader IF they don't have a target
         selectTarget(); //after following leader, it tries to find a suitable target -> Later, this should be changed as the explorer finding a target
         if(target())
         {
@@ -768,5 +805,33 @@ class RedRocketLauncher extends RocketLauncher {
         explorer.speed = launcherSpeed;
         explorer.brain[1].z = 1;
       }
+  }
+  
+  //
+  // handleMessages
+  // ==============
+  // > handle messages received
+  // > identify the closest localized burger
+  //
+  void handleMessages() {
+    Message msg;
+    // for all messages
+    for (int i=0; i<messages.size(); i++) {
+      // get next message
+      msg = messages.get(i);
+      // if "localized target" message
+      if (msg.type == INFORM_ABOUT_TARGET) {
+        System.out.println("Rocket Launcher : Target information received");
+        // record the position of the target
+        brain[0].x = msg.args[0];
+        brain[0].y = msg.args[1];
+        brain[0].z = msg.args[2];
+        brain[4].x=0;
+        brain[4].y=1;
+        
+      }
+    }
+    // clear the message queue
+    flushMessages();
   }
 }
