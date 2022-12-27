@@ -162,9 +162,9 @@ class RedExplorer extends Explorer {
     {
       //In coalition, the explorer will attempt to locate enemies, by classing them in priority, and then transmit that target to the team's rocket launchers
       LocateEnemy();
-      if(brain[4].y == 1) //if a target has been set, we do not move to give rockets time to attack
+      if(brain[4].y == 1) //if a target has been set, we move towards the target to give rockets time to attack
       {
-        
+        tryToMoveForward();
       }
       else{ //if no target found, we perform standard behavior
         if (brain[4].x == 1) {
@@ -214,7 +214,10 @@ class RedExplorer extends Explorer {
       brain[0].z = bob.breed;
       // locks the target
       brain[4].y = 1;
+      //changes heading :
+      heading = towards(brain[0]);
       //sends message to rockets
+      System.out.println("Explorer : target found, transmitting to rockets");
       TransmitTargetToTeam(bob);
     } else
       // no target found
@@ -235,6 +238,7 @@ class RedExplorer extends Explorer {
       if(rockets!=null){
         for(int i=0;i<rockets.size();i++)
         {
+          System.out.println("Explorer : sending msg to rocket "+rockets.get(i));
           informAboutTarget(rockets.get(i),target);
           //rockets.get(i).brain[2].z=1;
         }
@@ -644,8 +648,12 @@ class RedRocketLauncher extends RocketLauncher {
     else if(brain[1].z==1) //SQUAD BEHAVIOR
     {
       FindExplorer();
+      // handle messages received
+      handleMessages();
       if(brain[4].y==1) //if a target's been found by the leader, the rocket attacks it
       {
+        //since the target is given by explorer, we'll make it so the rockets try to go towards the target to enter effective range
+        tryToMoveTowardLeader();
         launchBullet(towards(brain[0]));
       }
       else //if no target given by explorer, rockets look for one themselves
@@ -828,7 +836,8 @@ class RedRocketLauncher extends RocketLauncher {
         brain[0].z = msg.args[2];
         brain[4].x=0;
         brain[4].y=1;
-        
+        //change heading to target :
+        heading = towards(brain[0]);
       }
     }
     // clear the message queue
