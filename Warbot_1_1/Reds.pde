@@ -233,6 +233,70 @@ void go() {
       brain[4].y = 0;
       TransmitTargetToTeam(null);
   }
+  
+  //
+  // ClassifyEnemy
+  // =============
+  // > function that will give the priority target
+  // > priority functions like : 
+  // harvesters > rockets > base > explorer
+  //
+  Robot ClassifyEnemy()
+  {
+    ArrayList<Robot> detectedEnemies = perceiveRobots(ennemy);
+    HashMap<Integer, ArrayList<Integer>> enemyMap = new HashMap<Integer,ArrayList<Integer>>(); //we're storing all the accessible bots in a hashmap int,ArrayList<int> where the key indicates the priority (1 for harv, 4 for explor) and the arrayList all the robots of said priority
+    enemyMap.put(1,new ArrayList<Integer>());
+    enemyMap.put(2,new ArrayList<Integer>());
+    enemyMap.put(3,new ArrayList<Integer>());
+    enemyMap.put(4,new ArrayList<Integer>());
+    if(detectedEnemies!=null)
+    {
+      for(int i=0;i<detectedEnemies.size();i++)
+      {
+        if(detectedEnemies.get(i).breed == HARVESTER)
+        {
+          ArrayList<Integer> locInt = enemyMap.get(1);
+          locInt.add(i);
+          enemyMap.put(1,locInt);
+        }
+        else if(detectedEnemies.get(i).breed == LAUNCHER)
+        {
+          ArrayList<Integer> locInt = enemyMap.get(2);
+          locInt.add(i);
+          enemyMap.put(2,locInt);
+        }
+        else if(detectedEnemies.get(i).breed == BASE)
+        {
+          ArrayList<Integer> locInt = enemyMap.get(3);
+          locInt.add(i);
+          enemyMap.put(3,locInt);
+        }
+        else
+        {
+          ArrayList<Integer> locInt = enemyMap.get(4);
+          locInt.add(i);
+          enemyMap.put(4,locInt);
+        }
+      }
+    }
+    //now, we access the first min value found in the hashmap :
+    if(enemyMap.get(1).size()!=0)
+    {
+      return detectedEnemies.get(enemyMap.get(1).get(0));
+    }
+    else if(enemyMap.get(2).size()!=0)
+    {
+       return detectedEnemies.get(enemyMap.get(2).get(0));     
+    }
+    else if(enemyMap.get(3).size()!=0)
+    {
+       return detectedEnemies.get(enemyMap.get(3).get(0));     
+    }
+    else
+    {
+       return detectedEnemies.get(enemyMap.get(4).get(0));     
+    }
+  }
 
   //
   // TransmitTargetToTeam
