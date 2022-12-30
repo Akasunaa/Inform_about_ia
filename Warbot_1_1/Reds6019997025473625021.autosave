@@ -296,8 +296,7 @@ void go() {
     {
        return detectedEnemies.get(enemyMap.get(4).get(0));     
     }
-    else
-    {
+    else{
       return null;
     }
   }
