@@ -913,8 +913,11 @@ class RedRocketLauncher extends RocketLauncher {
         brain[1].x = explorer.pos.x;
         brain[1].y = explorer.pos.y;
         brain[1].z = 1;
-        brain[1].x++;
+        //brain[1].x++;
         acquaintances[1]=explorer.who; //we save in the acquaintances the id of the explorer
+        explorer.speed = launcherSpeed;
+        explorer.brain[1].z = 1; //indicates that the explorer is part of the coalition formed by (this) rocket
+        explorer.brain[1].x++;
         return;
       }
   }
@@ -979,6 +982,12 @@ class RedRocketLauncher extends RocketLauncher {
         //change heading to target :
         heading = towards(brain[0]);
       }
+      else if(msg.type == 10) //réception message d'update de position du leader
+      {
+        brain[1].x = msg.args[0];
+        brain[1].y = msg.args[1];
+      }
+      
     }
     // clear the message queue
     flushMessages();
