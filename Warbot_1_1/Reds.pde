@@ -136,6 +136,7 @@ class RedBase extends Base {
 //   4.y = (0 = no target | 1 = locked target)
 //   0.x / 0.y = coordinates of the target
 //   0.z = type of the target
+//   1.x = number of rockets in the coalition (2 max)
 //   1.z = if in a coalition
 ///////////////////////////////////////////////////////////////////////////
 class RedExplorer extends Explorer {
@@ -468,6 +469,29 @@ void go() {
     if (freeAhead(speed))
       forward(speed);
   }
+  
+  //
+  // handleMessages
+  // ==============
+  // > handle messages received
+  // > identify the closest localized burger
+  //
+  void handleMessages() {
+    Message msg;
+    // for all messages
+    for (int i=0; i<messages.size(); i++) {
+      // get next message
+      msg = messages.get(i);
+      // if "leader position update" message
+      if (msg.type == 11) {
+        System.out.println("Explorer : position update demand received");
+        float[] arg ={pos.x,pos.y};
+        sendMessage((int)msg.args[0],10,arg); //sending msg to rocket
+      }
+    }
+    // clear the message queue
+    flushMessages();
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -724,7 +748,7 @@ class RedRocketLauncher extends RocketLauncher {
     } 
     else if(brain[1].z==1) //SQUAD BEHAVIOR
     {
-      FindExplorer();
+      UpdateExplorer(); //updates position with explorer's
       // handle messages received
       handleMessages();
       if(brain[4].y==1) //if a target's been found by the leader, the rocket attacks it
@@ -880,16 +904,55 @@ class RedRocketLauncher extends RocketLauncher {
   //  ============
   //  > try to find suitable leader
   //
-  void FindExplorer(){
-    Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
-      if(explorer!=null) //right now, we only test if explorer exists, not wether or not it's in squad
+  void FindExplorer()
+  {
+    // try to find a suitable coalition leader :
+      Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
+      if(explorer!=null && explorer.brain[1].x<2) //right now, we only test if explorer exists && has less than 2 ppl in squad
       {
         brain[1].x = explorer.pos.x;
         brain[1].y = explorer.pos.y;
         brain[1].z = 1;
-        explorer.speed = launcherSpeed;
-        explorer.brain[1].z = 1;
+        brain[1].x++;
+        acquaintances[1]=explorer.who; //we save in the acquaintances the id of the explorer
+        return;
       }
+  }
+  
+  //
+  //  UpdateExplorer
+  //  ============
+  //  > calls for leader's position update
+  //
+  void UpdateExplorer(){
+    //MESSAGE VERSION :
+    if(acquaintances[1]>0) //if the rocket has a team leader (explorer) we demand its position
+    {
+      sendMessage(acquaintances[1],11,null); //request position update
+    }
+    ////OTHER SYSTEM :
+    //Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
+    //if(explorer!=null && acquaintances[1]==0 && explorer.brain[1].x<2) //if the rocket doesn't have an explorer as acquaintance AND selected explorer has place in their team
+    //{
+    //  acquaintances[1] = explorer.who; //rocket saves the id of the explorer
+    //  brain[1].x = explorer.pos.x;
+    //  brain[1].y = explorer.pos.y;
+    //  brain[1].z = 1;
+    //  explorer.speed = launcherSpeed;
+    //  explorer.brain[1].z = 1; //indicates that the explorer is part of the coalition formed by (this) rocket
+    //  explorer.brain[1].x++;
+    //}
+    //else if(explorer!=null && explorer.brain[1].x<2 && explorer.who==acquaintances[1]) //if the explorer is the one that was in the coalition, we update position
+    //{
+    //  brain[1].x = explorer.pos.x;
+    //  brain[1].y = explorer.pos.y;
+    //}
+    //else if(explorer!=null && explorer.who!=acquaintances[1]) //if teamed-up explorer can't be found, we dissolve team
+    //{
+    //  acquaintances[1] = 0;
+    //  brain[1].z = 0;
+    //  explorer.brain[1].x--;
+    //}
   }
   
   //
