@@ -69,8 +69,12 @@ class RedBase extends Base {
   void setup() {
     // creates a new harvester
     newHarvester();
-    // 7 more harvesters to create
+    // 6 more harvesters to create
     brain[5].x = 7;
+    // 4 more explorers to create 
+    brain[5].y = 4;
+    // 2 more rocket launcher to create 
+    brain[5].z = 2;
   }
 
   //
@@ -180,6 +184,9 @@ class RedExplorer extends Explorer {
   //
   RedExplorer(PVector pos, color c, ArrayList b, Team t) {
     super(pos, c, b, t);
+    // 33% of chance to create an explorer of one those types : basic, convey, attack 
+    brain[4].z = int(random(3));
+    System.out.println("Explorer of type " + brain[4].z + " is born");
   }
 
   //
