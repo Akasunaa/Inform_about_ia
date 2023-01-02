@@ -154,6 +154,7 @@ class RedExplorer extends Explorer {
   // > called at the creation of the agent
   //
   void setup() {
+    brain[1].x=0;
   }
 
   //
@@ -163,6 +164,7 @@ class RedExplorer extends Explorer {
   // > defines the behavior of the agent
   //
 void go() {
+  handleMessages();
     // if food to deposit or too few energy
     if ((carryingFood > 200) || (energy < 100))
       // time to go back to base
@@ -279,28 +281,29 @@ void go() {
           enemyMap.put(4,locInt);
         }
       }
+      //now, we access the first min value found in the hashmap :
+      if(enemyMap.get(1).size()!=0)
+      {
+        return detectedEnemies.get(enemyMap.get(1).get(0));
+      }
+      else if(enemyMap.get(2).size()!=0)
+      {
+         return detectedEnemies.get(enemyMap.get(2).get(0));     
+      }
+      else if(enemyMap.get(3).size()!=0)
+      {
+         return detectedEnemies.get(enemyMap.get(3).get(0));     
+      }
+      else if(enemyMap.get(4).size()!=0)
+      {
+         return detectedEnemies.get(enemyMap.get(4).get(0));     
+      }
+      else
+      {
+        return null;
+      }
     }
-    //now, we access the first min value found in the hashmap :
-    if(enemyMap.get(1).size()!=0)
-    {
-      return detectedEnemies.get(enemyMap.get(1).get(0));
-    }
-    else if(enemyMap.get(2).size()!=0)
-    {
-       return detectedEnemies.get(enemyMap.get(2).get(0));     
-    }
-    else if(enemyMap.get(3).size()!=0)
-    {
-       return detectedEnemies.get(enemyMap.get(3).get(0));     
-    }
-    else if(enemyMap.get(4).size()!=0)
-    {
-       return detectedEnemies.get(enemyMap.get(4).get(0));     
-    }
-    else
-    {
-      return null;
-    }
+    return null;
   }
 
   //
@@ -485,7 +488,10 @@ void go() {
       // if "leader position update" message
       if (msg.type == 11) {
         System.out.println("Explorer : position update demand received");
-        float[] arg ={pos.x,pos.y};
+        float[] arg = new float[2];
+        arg[0]=pos.x;
+        arg[1]=pos.y;
+        System.out.println("Explorer : sending position update");
         sendMessage((int)msg.args[0],10,arg); //sending msg to rocket
       }
     }
@@ -769,14 +775,9 @@ class RedRocketLauncher extends RocketLauncher {
     } 
     else //STANDARD ALONE BEHAVIOR
     {
-      // try to find a suitable coalition leader :
-      Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
-      if(explorer!=null) //right now, we only test if explorer exists, not wether or not it's in squad
+      if(FindExplorer())//when alone, a rocket will try to find an explorer to link to
       {
-        brain[1].x = explorer.pos.x;
-        brain[1].y = explorer.pos.y;
-        brain[1].z = 1;
-        return;
+        return; //if a leader's been found, we avoid doing the standard alone behavior
       }
       // try to find a target
       selectTarget();
@@ -902,9 +903,9 @@ class RedRocketLauncher extends RocketLauncher {
   //
   //  FindExplorer
   //  ============
-  //  > try to find suitable leader
+  //  > try to find suitable leader (returns true if leader found)
   //
-  void FindExplorer()
+  boolean FindExplorer()
   {
     // try to find a suitable coalition leader :
       Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
@@ -918,8 +919,9 @@ class RedRocketLauncher extends RocketLauncher {
         explorer.speed = launcherSpeed;
         explorer.brain[1].z = 1; //indicates that the explorer is part of the coalition formed by (this) rocket
         explorer.brain[1].x++;
-        return;
+        return true;
       }
+      return false;
   }
   
   //
