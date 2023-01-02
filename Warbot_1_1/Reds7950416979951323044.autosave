@@ -988,8 +988,12 @@ class RedRocketLauncher extends RocketLauncher {
       }
       else if(msg.type == 10) //réception message d'update de position du leader
       {
-        brain[1].x = msg.args[0];
-        brain[1].y = msg.args[1];
+        System.out.println("Rocket launcher : receiving update from ");
+        if(msg.args!=null)
+        {
+          brain[1].x = msg.args[0];
+          brain[1].y = msg.args[1];
+        }
       }
       
     }
