@@ -43,10 +43,18 @@ class RedBase extends Base {
     newHarvester();
     // 7 more harvesters to create
     brain[5].x = 7;
-    brain[5].z = 2;
   }
-  
-  void chooseNewRobot(){
+
+  //
+  // go
+  // ==
+  // > called at each iteration of the game
+  // > defines the behavior of the agent
+  //
+  void go() {
+    // handle received messages 
+    handleMessages();
+
     // creates new robots depending on energy and the state of brain[5]
     if ((brain[5].x > 0) && (energy >= 1000 + harvesterCost)) {
       // 1st priority = creates harvesters 
@@ -60,19 +68,9 @@ class RedBase extends Base {
       // 3rd priority = creates explorers 
       if (newExplorer())
         brain[5].z--;
-    } 
-    //No priority : random
-    else if (energy > 12000) {
-      ArrayList seeds = perceiveSeeds(friend);
-      ArrayList robots = perceiveRobots(friend, HARVESTER);
-
-      if(seeds!=null && robots!=null)
-          if(seeds.size()>150 && robots.size()>4) //lot of harvest
-            brain[5].y++;
-          else if(seeds.size()<50)
-            brain[5].x++;        
+    } else if (energy > 12000) {
       // if no robot in the pipe and enough energy 
-      else if ((int)random(2) == 0)
+      if ((int)random(2) == 0)
         // creates a new harvester with 50% chance
         brain[5].x++;
       else if ((int)random(2) == 0)
@@ -82,18 +80,7 @@ class RedBase extends Base {
         // creates a new explorer with 25% chance
         brain[5].z++;
     }
-  }
 
-  //
-  // go
-  // ==
-  // > called at each iteration of the game
-  // > defines the behavior of the agent
-  //
-  void go() {
-    // handle received messages 
-    handleMessages();
-    chooseNewRobot();
     // creates new bullets and fafs if the stock is low and enought energy
     if ((bullets < 10) && (energy > 1000))
       newBullets(50);
@@ -177,16 +164,7 @@ class RedExplorer extends Explorer {
   // > defines the behavior of the agent
   //
 void go() {
-<<<<<<< HEAD
-    //if die
-    if(energy<50){
-        Base bob = (Base)minDist(myBases);
-        if (bob != null) 
-            bob.brain[5].z+=1;      
-    }
-=======
   handleMessages();
->>>>>>> 354be603d40bae12e8ec8b28003bf5bee6192c02
     // if food to deposit or too few energy
     if ((carryingFood > 200) || (energy < 100))
       // time to go back to base
@@ -195,11 +173,9 @@ void go() {
     // depending on the state of the robot
     if(brain[1].z==1) //COALITION BEHAVIOR
     {
-      LocateEnemy();
-      if(energy < 100){
-        brain[4].x = 1;}
       //In coalition, the explorer will attempt to locate enemies, by classing them in priority, and then transmit that target to the team's rocket launchers
-      else if(brain[4].y == 1) //if a target has been set, we move towards the target to give rockets time to attack
+      LocateEnemy();
+      if(brain[4].y == 1) //if a target has been set, we move towards the target to give rockets time to attack
       {
         tryToMoveForward();
       }
@@ -253,7 +229,7 @@ void go() {
       //changes heading :
       heading = towards(brain[0]);
       //sends message to rockets
-      //System.out.println("Explorer : target found, transmitting to rockets");
+      System.out.println("Explorer : target found, transmitting to rockets");
       TransmitTargetToTeam(bob);
     } else
       // no target found
@@ -343,7 +319,7 @@ void go() {
       if(rockets!=null){
         for(int i=0;i<rockets.size();i++)
         {
-          //System.out.println("Explorer : sending msg to rocket "+rockets.get(i));
+          System.out.println("Explorer : sending msg to rocket "+rockets.get(i));
           informAboutTarget(rockets.get(i),target);
           //rockets.get(i).brain[2].z=1;
         }
@@ -560,11 +536,7 @@ class RedHarvester extends Harvester {
   void go() {
     // handle messages received
     handleMessages();
-    if(energy<50){
-        Base bob = (Base)minDist(myBases);
-        if (bob != null) 
-            bob.brain[5].x+=1;      
-    }
+
     // check for the closest burger
     Burger b = (Burger)minDist(perceiveBurgers());
     if ((b != null) && (distance(b) <= 2))
@@ -770,11 +742,6 @@ class RedRocketLauncher extends RocketLauncher {
   // > defines the behavior of the agent
   //
   void go() {
-    if(energy<50){
-        Base bob = (Base)minDist(myBases);
-        if (bob != null) 
-            bob.brain[5].y+=1;      
-    }
     // if no energy or no bullets
     if ((energy < 100) || (bullets == 0))
       // go back to the base
@@ -1009,7 +976,7 @@ class RedRocketLauncher extends RocketLauncher {
       msg = messages.get(i);
       // if "localized target" message
       if (msg.type == INFORM_ABOUT_TARGET) {
-        //System.out.println("Rocket Launcher : Target information received");
+        System.out.println("Rocket Launcher : Target information received");
         // record the position of the target
         brain[0].x = msg.args[0];
         brain[0].y = msg.args[1];
@@ -1021,8 +988,12 @@ class RedRocketLauncher extends RocketLauncher {
       }
       else if(msg.type == 10) //réception message d'update de position du leader
       {
-        brain[1].x = msg.args[0];
-        brain[1].y = msg.args[1];
+        System.out.println("Rocket launcher : receiving update from ");
+        if(msg.args!=null)
+        {
+          brain[1].x = msg.args[0];
+          brain[1].y = msg.args[1];
+        }
       }
       
     }
