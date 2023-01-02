@@ -5,8 +5,36 @@
 //
 ///////////////////////////////////////////////////////////////////////////
 
+
+//------CUSTOM MESSAGE FOR THE RED TEAM ARE DEFINED HERE----------//
+  
+  final int ASK_FOR_JOINING_COALITION = 5;
+  // message used to invite someone to a coalition. It goes hand in hand with multiples arguments. 
+  // arg[0] : type of coalition 
+  // arg[1] : role offered for this coalition 
+  
+  final int RESPOND_TO_COALITION_OFFER = 6;
+  //message used in order to accept or decline a coalition offer. 
+  // args[0] : 0 = Refusal | 1 = Compliance
+  
+  final int CONFIRM_COALITION_FORMATION =  7; 
+  //message used in order to confirm the creation of the coalition. 
+  // arg[0] : type of coalition 
+  // arg[1] : role in this coalition, depending on the type of coalition 
+  
+  final int INFORM_ABOUT_DISSOLVING_COALITION = 8;
+  // message used in order to dissolve a coalition. If the transmitter and the receiver belong to the same coalition, the coalition is canceled and the receiver transmit the message too. 
+  // no specific arguments
+  
+  final int HI_THERE = 9;
+  //Message used in order to say hi to another unit. The main purpose of this is to regularly check if the members of a coalition is still alive
+  //no specific argument 
+
+//------END OF CUSTOM MESSAGE DEFINITION ----------//
+
+
 class RedTeam extends Team {
-  final int MY_CUSTOM_MSG = 5;
+  
   PVector base1, base2;
 
   // coordinates of the 2 bases, chosen in the rectangle with corners
@@ -53,8 +81,8 @@ class RedBase extends Base {
   //
   void go() {
     // handle received messages 
-    handleMessages();
-
+    handleMessages();   
+    
     // creates new robots depending on energy and the state of brain[5]
     if ((brain[5].x > 0) && (energy >= 1000 + harvesterCost)) {
       // 1st priority = creates harvesters 
@@ -134,9 +162,16 @@ class RedBase extends Base {
 // map of the brain:
 //   4.x = (0 = exploration | 1 = go back to base)
 //   4.y = (0 = no target | 1 = locked target)
+//   4.z = (0 = basic explorer | 1 = chief of convey coalition | 2 = chief of attack coalition)
 //   0.x / 0.y = coordinates of the target
 //   0.z = type of the target
+//   1.x / 1.y [if chief of convey coalition] = coordinate of the nomad havester search point 
 //   1.z = if in a coalition
+//
+//map of the aquaintances:
+//   • if the explorer is a chief of convey coalition
+//     0 = id of the sedentary harvester
+//     1 = id of the nomad harvester 
 ///////////////////////////////////////////////////////////////////////////
 class RedExplorer extends Explorer {
   //
@@ -468,6 +503,113 @@ void go() {
     if (freeAhead(speed))
       forward(speed);
   }
+  
+  // ---------- COMMUNICATION SPECIFIC FUNCTIONS FOR RED_EXPLORER ------------//
+  
+  //Message used in order to suggest the creation of a new coalition to other robots, with this explorer as chief.
+  void explorerAskForJoiningCoalition(Robot bob, int coalitionType, int role){
+    // check that bob exists and distance is less than max range
+    if ((bob != null) && (distance(bob) < messageRange)) {
+      // build the message...
+      float[] args = new float[2];
+      args[0] = coalitionType;
+      args[1] = role ;  
+      Message msg = new Message(ASK_FOR_JOINING_COALITION, who, bob.who, args);
+      // ...and add it to bob's messages queue
+      bob.messages.add(msg);
+    }
+  }
+  
+  void explorerAskForJoiningCoalition(int id, int coalitionType, int role){
+    Robot bob = game.getRobot(id);
+    // check that bob exists and distance is less than max range
+    if ((bob != null) && (distance(bob) < messageRange)) {
+      // build the message...
+      float[] args = new float[2];
+      args[0] = coalitionType;
+      args[1] = role ;  
+      Message msg = new Message(ASK_FOR_JOINING_COALITION, who, bob.who, args);
+      // ...and add it to bob's messages queue
+      bob.messages.add(msg);
+    }
+  }
+  
+  //Message used in order to confirm the creation of the coalition to other members.
+  void explorerConfirmCoalitionFormation(Robot bob, int coalitionType, int finalRole){
+    // check that bob exists and distance is less than max range
+    if ((bob != null) && (distance(bob) < messageRange)) {
+      // build the message...
+      float[] args = new float[2];
+      args[0] = coalitionType;
+      args[1] = finalRole;  
+      Message msg = new Message(CONFIRM_COALITION_FORMATION, who, bob.who, args);
+      // ...and add it to bob's messages queue
+      bob.messages.add(msg);
+    }
+  }
+  
+  void explorerConfirmCoalitionFormation(int id, int coalitionType, int finalRole){
+    Robot bob = game.getRobot(id);
+    // check that bob exists and distance is less than max range
+    if ((bob != null) && (distance(bob) < messageRange)) {
+      // build the message...
+      float[] args = new float[2];
+      args[0] = coalitionType;
+      args[1] = finalRole;  
+      Message msg = new Message(CONFIRM_COALITION_FORMATION, who, bob.who, args);
+      // ...and add it to bob's messages queue
+      bob.messages.add(msg);
+    }
+  }
+  
+  //Message used in order to inform other members about the end of the coalition .
+  void explorerDissolveCoalition(Robot bob){
+    // check that bob exists and distance is less than max range
+    if ((bob != null) && (distance(bob) < messageRange)) {
+      // build the message...
+      float[] args = new float[0]; 
+      Message msg = new Message(INFORM_ABOUT_DISSOLVING_COALITION, who, bob.who, args);
+      // ...and add it to bob's messages queue
+      bob.messages.add(msg);
+    }
+  }
+  
+   void explorerDissolveCoalition(int id){
+     Robot bob = game.getRobot(id);
+    // check that bob exists and distance is less than max range
+    if ((bob != null) && (distance(bob) < messageRange)) {
+      // build the message...
+      float[] args = new float[0]; 
+      Message msg = new Message(INFORM_ABOUT_DISSOLVING_COALITION, who, bob.who, args);
+      // ...and add it to bob's messages queue
+      bob.messages.add(msg);
+    }
+  }
+  
+  void explorerSayHi(Robot bob){
+    // check that bob exists and distance is less than max range
+    if ((bob != null) && (distance(bob) < messageRange)) {
+      // build the message...
+      float[] args = new float[0]; 
+      Message msg = new Message(HI_THERE, who, bob.who, args);
+      // ...and add it to bob's messages queue
+      bob.messages.add(msg);
+    }
+  }
+  
+  void explorerSayHi(int id){
+    Robot bob = game.getRobot(id);
+    // check that bob exists and distance is less than max range
+    if ((bob != null) && (distance(bob) < messageRange)) {
+      // build the message...
+      float[] args = new float[0]; 
+      Message msg = new Message(HI_THERE, who, bob.who, args);
+      // ...and add it to bob's messages queue
+      bob.messages.add(msg);
+    }
+  }
+   // ---------- END COMMUNICATION SPECIFIC FUNCTIONS FOR RED_EXPLORER ------------//
+  
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -478,7 +620,13 @@ void go() {
 // map of the brain:
 //   4.x = (0 = look for food | 1 = go back to base) 
 //   4.y = (0 = no food found | 1 = food found)
+//   4.z = harvester type (0 = basic | 1 = sendentary | 2 = nomad)
+//   1.Z = type of coalition (0 = None | 1 = convey coalition)
 //   0.x / 0.y = position of the localized food
+//
+// map of the aquaintances:
+//   • if the harvester belongs to a convey colaition 
+//     0 = id of the chief explorer
 ///////////////////////////////////////////////////////////////////////////
 class RedHarvester extends Harvester {
   //
@@ -672,6 +820,84 @@ class RedHarvester extends Harvester {
     // clear the message queue
     flushMessages();
   }
+  
+   // ---------- COMMUNICATION SPECIFIC FUNCTIONS FOR RED_HARVESTER------------//
+  
+  //Message used in order to confirm or not the participation oh the harvester to the coalition.
+  void harvesterRespondToCoalitionOffer(Robot bob, boolean accepted){
+    // check that bob exists and distance is less than max range
+    if ((bob != null) && (distance(bob) < messageRange)) {
+      // build the message...
+      float[] args = new float[1];
+      args[0] = accepted ? 1 : 0; 
+      Message msg = new Message(RESPOND_TO_COALITION_OFFER, who, bob.who, args);
+      // ...and add it to bob's messages queue
+      bob.messages.add(msg);
+    }
+  }
+  
+  void harvesterRespondToCoalitionOffer(int id, boolean accepted){
+    Robot bob = game.getRobot(id);
+    // check that bob exists and distance is less than max range
+    if ((bob != null) && (distance(bob) < messageRange)) {
+      // build the message...
+      float[] args = new float[1];
+      args[0] = accepted ? 1 : 0; 
+      Message msg = new Message(RESPOND_TO_COALITION_OFFER, who, bob.who, args);
+      // ...and add it to bob's messages queue
+      bob.messages.add(msg);
+    }
+  }
+  
+  
+  //Message used in order to inform about the end of the coalition 
+  void harvesterDissolveCoalition(Robot bob){
+    // check that bob exists and distance is less than max range
+    if ((bob != null) && (distance(bob) < messageRange)) {
+      // build the message...
+      float[] args = new float[0]; 
+      Message msg = new Message(INFORM_ABOUT_DISSOLVING_COALITION, who, bob.who, args);
+      // ...and add it to bob's messages queue
+      bob.messages.add(msg);
+    }
+  }
+  
+   void harvesterDissolveCoalition(int id){
+    Robot bob = game.getRobot(id);
+    // check that bob exists and distance is less than max range
+    if ((bob != null) && (distance(bob) < messageRange)) {
+      // build the message...
+      float[] args = new float[0]; 
+      Message msg = new Message(INFORM_ABOUT_DISSOLVING_COALITION, who, bob.who, args);
+      // ...and add it to bob's messages queue
+      bob.messages.add(msg);
+    }
+  }
+  
+  void harvesterSayHi(Robot bob){
+    // check that bob exists and distance is less than max range
+    if ((bob != null) && (distance(bob) < messageRange)) {
+      // build the message...
+      float[] args = new float[0]; 
+      Message msg = new Message(HI_THERE, who, bob.who, args);
+      // ...and add it to bob's messages queue
+      bob.messages.add(msg);
+    }
+  }
+  
+  void harvesterSayHi(int id){
+    Robot bob = game.getRobot(id);
+    // check that bob exists and distance is less than max range
+    if ((bob != null) && (distance(bob) < messageRange)) {
+      // build the message...
+      float[] args = new float[0]; 
+      Message msg = new Message(HI_THERE, who, bob.who, args);
+      // ...and add it to bob's messages queue
+      bob.messages.add(msg);
+    }
+  }
+   // ---------- END OF COMMUNICATION SPECIFIC FUNCTIONS FOR RED_HARVESTER ------------//
+   
 }
 
 ///////////////////////////////////////////////////////////////////////////

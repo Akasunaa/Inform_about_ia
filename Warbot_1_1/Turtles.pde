@@ -1,4 +1,4 @@
-class Team { //<>// //<>// //<>// //<>//
+class Team { //<>// //<>// //<>// //<>// //<>//
   Team() {
   }
 }
@@ -1053,7 +1053,7 @@ class Robot extends Turtle {
       args[0] = qty;
       Message msg = new Message(ASK_FOR_BULLETS, who, bob.who, args);
       // ...and add it to bob's messages queue
-      bob. messages.add(msg);
+      bob.messages.add(msg);
     }
   }
 
@@ -1172,7 +1172,7 @@ class Robot extends Turtle {
       args[3] = target.who;      
       Message msg = new Message(INFORM_ABOUT_TARGET, who, bob.who, args);
       // ...and add it to bob's messages queue
-      bob. messages.add(msg);
+      bob.messages.add(msg);
     }
   }
 
@@ -1198,7 +1198,7 @@ class Robot extends Turtle {
       args[3] = target.who;      
       Message msg = new Message(INFORM_ABOUT_TARGET, who, bob.who, args);
       // ...and add it to bob's messages queue
-      bob. messages.add(msg);
+      bob.messages.add(msg);
     }
   }
 
