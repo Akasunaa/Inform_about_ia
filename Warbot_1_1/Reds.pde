@@ -192,12 +192,9 @@ void go() {
     // depending on the state of the robot
     if(brain[1].z==1) //COALITION BEHAVIOR
     {
+      //In coalition, the explorer will attempt to locate enemies, by classing them in priority, and then transmit that target to the team's rocket launchers
       LocateEnemy();
-      if(energy < 100)
-      {
-        brain[4].x = 1;
-      }
-      else if(energy<20) //if the explorer has too low of an energy and its going to die, we dissolve the coalition
+      if(energy<20) //if the explorer has too low of an energy and its going to die, we dissolve the coalition
       {
         //DISSOLVE COALITION
         System.out.println("Explorer : dissolving coalition");
@@ -219,7 +216,10 @@ void go() {
         }
         brain[1].z=0;
       }
-      //In coalition, the explorer will attempt to locate enemies, by classing them in priority, and then transmit that target to the team's rocket launchers
+      if(energy < 100)
+      {
+        brain[4].x = 1;
+      }
       else if(brain[4].y == 1) //if a target has been set, we move towards the target to give rockets time to attack
       {
         tryToMoveForward();
