@@ -212,7 +212,7 @@ void go() {
     handleMessages();
     
     // if food to deposit or too few energy
-    if ((carryingFood > 200) || (energy < 100))
+    if (( (carryingFood > 200) && brain[1].z != 2 ) || (energy < 100))
       // time to go back to base
       brain[4].x = 1;
 
@@ -238,7 +238,13 @@ void go() {
     
     else if(brain[1].z == 2) //CONVEY COALITION BEHAVIOR
     {
-      //TODO
+      checkUponHarvesters();
+      
+      if(carryingFood < 100){
+        joinNomadHarvester();
+      } else {
+        joinSedentaryHarvester();
+      }
     } 
     
     else if ( brain[1].z == 0 && brain[4].z == 2){ //THE EXPLORER TYPE IS CONVEY CHIEF AND NOT IN A COALITION NOW
@@ -288,7 +294,7 @@ void go() {
             }
           }
           else if(brain[2].z == 2){
-          // make a proposition for first role
+          // make a proposition for first role if someone already accepted the second
           if(harv1 != null && harv1.who != acquaintances[1]){ 
               explorerAskForJoiningCoalition(harv1, 2, 1); // we propose to the first havester to join the coalition as nomad harvester
               acquaintances[0] = harv1.who; 
@@ -450,6 +456,53 @@ void go() {
       }
     }
     
+  }
+  
+  //
+  // joinNomadHarvester
+  // ============
+  // > go found the nomad havester of the coalition until the explorer get enough food !
+  //
+  void joinNomadHarvester(){
+      heading = towards(brain[1]); 
+      tryToMoveForward();
+  }
+  
+  //
+  // joinSedentaryHarvester
+  // ============
+  // > go found the sedentary havester of the coalition until the explorer get close enough to give it previously collected food
+  //
+  void joinSedentaryHarvester(){ 
+      heading = towards(brain[2]); 
+      tryToMoveForward();
+      
+      //check id the sedentary is perceived and close enough
+        ArrayList<Harvester> harvesters = (ArrayList<Harvester>)perceiveRobots(friend,HARVESTER); //check harvesters around.
+        if(harvesters!=null){
+          for(int i=0;i<harvesters.size();i++)
+          {
+            Harvester harvest = harvesters.get(i);
+            if(harvest.who == acquaintances[0]){ //if we found the sedentary harvest, update its position 
+              brain[2].x = harvest.pos.x;
+              brain[2].y = harvest.pos.y;
+              if(distance(harvest) <=2){
+                giveFood(harvest, carryingFood); //and if close enough, give food; 
+              }
+              break;
+            }
+          }
+        }
+  }
+  
+  //
+  // checkUponHarvesters
+  // ============
+  // > send Hello to other coalition Harvesters, in order to reset their coalition expiration timer and get a response to update their position in brain
+  //
+  void checkUponHarvesters(){
+    explorerSayHi(acquaintances[0]);
+    explorerSayHi(acquaintances[1]);
   }
 
   //
@@ -820,12 +873,44 @@ class RedHarvester extends Harvester {
     }
     else if (brain[1].z == 1) { //CONVEY COALITION BEHAVIOR 
     
+      Base base = (Base)minDist(myBases);
+      float dist = distance(base);
+    
       if (brain[4].z == 1) { // sendentary behavior
       
+        if(dist > basePerception){
+          brain[4].x = 1; //if the sedentary haverster got too far, it's going back to base
+        }
+        
       }
+      
       
       else if (brain[4].z == 2){ // nomad behavior 
       
+        //check si l'explorateur est à portée de lui 
+        ArrayList<Explorer> explorers = (ArrayList<Explorer>)perceiveRobots(friend,EXPLORER); //check the explorers around.
+        if(explorers!=null){
+          for(int i=0;i<explorers.size();i++)
+          {
+            Explorer explo = explorers.get(i);
+            if(explo.who == acquaintances[0]){ //if we founf the chief of the coalition
+              giveFood(explo, carryingFood);
+              harvesterSayHi(explo);
+              break;
+            }
+          }
+        }
+        
+        
+        if(dist < basePerception * 2){ //if we are too close from the base, we go away;
+          heading = towards(base) + random(-radians(20), radians(20));
+          right(180);
+          tryToMoveForward();
+        } 
+        else { //if the harvester is far enough, explore as usual; 
+          goAndEat();
+        }
+        
       }
     }
     else { // BASIC BEHAVIOR
@@ -932,6 +1017,7 @@ class RedHarvester extends Harvester {
     if (freeAhead(speed))
       forward(speed);
   }
+  
 
   //
   // handleMessages
