@@ -267,7 +267,7 @@ void go() {
   //
   Robot ClassifyEnemy()
   {
-    ArrayList<Robot> detectedEnemies = perceiveRobots(ennemy);
+    ArrayList<Robot> detectedEnemies = perceiveRobots(ennemy); //store all detected enemies
     HashMap<Integer, ArrayList<Integer>> enemyMap = new HashMap<Integer,ArrayList<Integer>>(); //we're storing all the accessible bots in a hashmap int,ArrayList<int> where the key indicates the priority (1 for harv, 4 for explor) and the arrayList all the robots of said priority
     enemyMap.put(1,new ArrayList<Integer>());
     enemyMap.put(2,new ArrayList<Integer>());
@@ -275,7 +275,7 @@ void go() {
     enemyMap.put(4,new ArrayList<Integer>());
     if(detectedEnemies!=null)
     {
-      for(int i=0;i<detectedEnemies.size();i++)
+      for(int i=0;i<detectedEnemies.size();i++) //for each enemy type, we store them in the Hashmap
       {
         if(detectedEnemies.get(i).breed == HARVESTER)
         {
@@ -956,10 +956,7 @@ class RedRocketLauncher extends RocketLauncher {
         brain[1].x = explorer.pos.x;
         brain[1].y = explorer.pos.y;
         brain[1].z = 1;
-        sendMessage(explorer.who, 12, arg);
-        //explorer.speed = launcherSpeed;
-        //explorer.brain[1].z = 1; //indicates that the explorer is part of the coalition formed by (this) rocket
-        //explorer.brain[1].x++;
+        sendMessage(explorer.who, 12, arg); //send a link-up request message is sent to the explorer
         return true;
       }
       return false;
@@ -978,29 +975,6 @@ class RedRocketLauncher extends RocketLauncher {
       arg[0]=who;
       sendMessage(acquaintances[1],11,arg); //request position update
     }
-    ////OTHER SYSTEM :
-    //Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
-    //if(explorer!=null && acquaintances[1]==0 && explorer.brain[1].x<2) //if the rocket doesn't have an explorer as acquaintance AND selected explorer has place in their team
-    //{
-    //  acquaintances[1] = explorer.who; //rocket saves the id of the explorer
-    //  brain[1].x = explorer.pos.x;
-    //  brain[1].y = explorer.pos.y;
-    //  brain[1].z = 1;
-    //  explorer.speed = launcherSpeed;
-    //  explorer.brain[1].z = 1; //indicates that the explorer is part of the coalition formed by (this) rocket
-    //  explorer.brain[1].x++;
-    //}
-    //else if(explorer!=null && explorer.brain[1].x<2 && explorer.who==acquaintances[1]) //if the explorer is the one that was in the coalition, we update position
-    //{
-    //  brain[1].x = explorer.pos.x;
-    //  brain[1].y = explorer.pos.y;
-    //}
-    //else if(explorer!=null && explorer.who!=acquaintances[1]) //if teamed-up explorer can't be found, we dissolve team
-    //{
-    //  acquaintances[1] = 0;
-    //  brain[1].z = 0;
-    //  explorer.brain[1].x--;
-    //}
   }
   
   //
