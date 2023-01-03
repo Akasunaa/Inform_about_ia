@@ -510,13 +510,21 @@ void go() {
       // get next message
       msg = messages.get(i);
       // if "leader position update" message
-      if (msg.type == 11) {
+      if (msg.type == 11) //tests if the message received is a position update demand from a rocket 
+      {
         System.out.println("Explorer : position update demand received");
         float[] arg = new float[2];
         arg[0]=pos.x;
         arg[1]=pos.y;
         System.out.println("Explorer : sending position update");
         sendMessage((int)msg.args[0],10,arg); //sending msg to rocket
+      }
+      else if(msg.type == 12) //tests if the message received is a link-up demand
+      {
+        System.out.println("Explorer : link-up demand received");
+        speed = launcherSpeed;
+        brain[1].z = 1; //indicates that the explorer is part of the coalition formed by (this) rocket
+        explorer.brain[1].x++;
       }
     }
     // clear the message queue
@@ -944,14 +952,17 @@ class RedRocketLauncher extends RocketLauncher {
       Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
       if(explorer!=null && explorer.brain[1].x<2) //right now, we only test if explorer exists && has less than 2 ppl in squad
       {
+        System.out.println("Rocket : sending link message request to explorer "+explorer.who);
+        float[] arg = new float[1];
+        arg[0]=who;
+        acquaintances[1]=explorer.who; //we save in the acquaintances the id of the explorer
         brain[1].x = explorer.pos.x;
         brain[1].y = explorer.pos.y;
         brain[1].z = 1;
-        //brain[1].x++;
-        acquaintances[1]=explorer.who; //we save in the acquaintances the id of the explorer
-        explorer.speed = launcherSpeed;
-        explorer.brain[1].z = 1; //indicates that the explorer is part of the coalition formed by (this) rocket
-        explorer.brain[1].x++;
+        sendMessage(explorer.who, 12, arg);
+        //explorer.speed = launcherSpeed;
+        //explorer.brain[1].z = 1; //indicates that the explorer is part of the coalition formed by (this) rocket
+        //explorer.brain[1].x++;
         return true;
       }
       return false;
