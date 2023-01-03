@@ -606,18 +606,6 @@ void go() {
       msg = messages.get(i);
       // if "localized target" message
       
-      if (msg.type == INFORM_ABOUT_TARGET) {
-        System.out.println("Rocket Launcher : Target information received");
-        // record the position of the target
-        brain[0].x = msg.args[0];
-        brain[0].y = msg.args[1];
-        brain[0].z = msg.args[2];
-        brain[4].x=0;
-        brain[4].y=1;
-        //change heading to target :
-        heading = towards(brain[0]);
-      }
-      
       if(msg.type == HI_THERE){
           p.x = msg.args[0]; //x coordinate of alice
           p.y = msg.args[1]; //y coordinate of alice 
@@ -627,14 +615,14 @@ void go() {
               //update sedentary position : 
               brain[2].x = p.x;
               brain[2].y = p.y;
-              harvesterSayHi(msg.alice); //say hi back to sendentary haverster. 
+              explorerSayHi(msg.alice); //say hi back to sendentary haverster. 
               } 
             if(msg.alice == acquaintances[1]){ // if the one to say HI is the nomad haverster
               // TODO : reset coalition expiration timer 
               //update nomad position : 
               brain[1].x = p.x;
               brain[1].y = p.y;
-              harvesterSayHi(msg.alice); //say hi back to nomad haverster. 
+              explorerSayHi(msg.alice); //say hi back to nomad haverster. 
             }
           }
             
