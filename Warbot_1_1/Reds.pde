@@ -177,16 +177,13 @@ class RedExplorer extends Explorer {
   // > defines the behavior of the agent
   //
 void go() {
-<<<<<<< HEAD
     //if die
     if(energy<50){
         Base bob = (Base)minDist(myBases);
         if (bob != null) 
             bob.brain[5].z+=1;      
     }
-=======
   handleMessages();
->>>>>>> 354be603d40bae12e8ec8b28003bf5bee6192c02
     // if food to deposit or too few energy
     if ((carryingFood > 200) || (energy < 100))
       // time to go back to base
