@@ -251,11 +251,10 @@ void go() {
         
         if( brain[2].z == 3){
         //confirm coalition to both aquaintances and transmit confirm message 
-        explorerConfirmCoalitionFormation(acquaintances[0], 2, 1); //send a message and register 
-        explorerConfirmCoalitionFormation(acquaintances[1], 2, 2);
+        explorerConfirmCoalitionFormation(acquaintances[0], 2, 1); //send confirmation message to sendentary havester. It will reply and transmit his position.
+        explorerConfirmCoalitionFormation(acquaintances[1], 2, 2); //same for nomad harvester 
         brain[2].z = 0; //recruitement is finished ! 
         brain[1].z = 2; //explorer belong to convey coalition now
-        //Robot sendentaryHarv = 
         } 
         
         else {
@@ -591,24 +590,16 @@ void go() {
       float[] args = new float[2];
       args[0] = coalitionType;
       args[1] = role ;  
-      Message msg = new Message(ASK_FOR_JOINING_COALITION, who, bob.who, args);
-      // ...and add it to bob's messages queue
-      bob.messages.add(msg);
+      sendMessage(bob.who, ASK_FOR_JOINING_COALITION, args);
     }
   }
   
   void explorerAskForJoiningCoalition(int id, int coalitionType, int role){
-    Robot bob = game.getRobot(id);
-    // check that bob exists and distance is less than max range
-    if ((bob != null) && (distance(bob) < messageRange)) {
       // build the message...
       float[] args = new float[2];
       args[0] = coalitionType;
       args[1] = role ;  
-      Message msg = new Message(ASK_FOR_JOINING_COALITION, who, bob.who, args);
-      // ...and add it to bob's messages queue
-      bob.messages.add(msg);
-    }
+      sendMessage(id, ASK_FOR_JOINING_COALITION, args);
   }
   
   //Message used in order to confirm the creation of the coalition to other members.
@@ -619,24 +610,16 @@ void go() {
       float[] args = new float[2];
       args[0] = coalitionType;
       args[1] = finalRole;  
-      Message msg = new Message(CONFIRM_COALITION_FORMATION, who, bob.who, args);
-      // ...and add it to bob's messages queue
-      bob.messages.add(msg);
+      sendMessage(bob.who, CONFIRM_COALITION_FORMATION, args);
     }
   }
   
   void explorerConfirmCoalitionFormation(int id, int coalitionType, int finalRole){
-    Robot bob = game.getRobot(id);
-    // check that bob exists and distance is less than max range
-    if ((bob != null) && (distance(bob) < messageRange)) {
       // build the message...
       float[] args = new float[2];
       args[0] = coalitionType;
       args[1] = finalRole;  
-      Message msg = new Message(CONFIRM_COALITION_FORMATION, who, bob.who, args);
-      // ...and add it to bob's messages queue
-      bob.messages.add(msg);
-    }
+      sendMessage(id, CONFIRM_COALITION_FORMATION, args);
   }
   
   //Message used in order to inform other members about the end of the coalition .
@@ -645,22 +628,14 @@ void go() {
     if ((bob != null) && (distance(bob) < messageRange)) {
       // build the message...
       float[] args = new float[0]; 
-      Message msg = new Message(INFORM_ABOUT_DISSOLVING_COALITION, who, bob.who, args);
-      // ...and add it to bob's messages queue
-      bob.messages.add(msg);
+      sendMessage(bob.who, INFORM_ABOUT_DISSOLVING_COALITION, args);
     }
   }
   
    void explorerDissolveCoalition(int id){
-     Robot bob = game.getRobot(id);
-    // check that bob exists and distance is less than max range
-    if ((bob != null) && (distance(bob) < messageRange)) {
       // build the message...
       float[] args = new float[0]; 
-      Message msg = new Message(INFORM_ABOUT_DISSOLVING_COALITION, who, bob.who, args);
-      // ...and add it to bob's messages queue
-      bob.messages.add(msg);
-    }
+      sendMessage(id, INFORM_ABOUT_DISSOLVING_COALITION, args);
   }
   
   void explorerSayHi(Robot bob){
@@ -670,24 +645,16 @@ void go() {
       float[] args = new float[2]; 
       args[0] = pos.x;
       args[1] = pos.y; 
-      Message msg = new Message(HI_THERE, who, bob.who, args);
-      // ...and add it to bob's messages queue
-      bob.messages.add(msg);
+      sendMessage(bob.who, HI_THERE, args);
     }
   }
   
   void explorerSayHi(int id){
-    Robot bob = game.getRobot(id);
-    // check that bob exists and distance is less than max range
-    if ((bob != null) && (distance(bob) < messageRange)) {
       // build the message...
       float[] args = new float[2]; 
       args[0] = pos.x;
       args[1] = pos.y; 
-      Message msg = new Message(HI_THERE, who, bob.who, args);
-      // ...and add it to bob's messages queue
-      bob.messages.add(msg);
-    }
+      sendMessage(id, HI_THERE, args);
   }
    // ---------- END COMMUNICATION SPECIFIC FUNCTIONS FOR RED_EXPLORER ------------//
   
@@ -702,7 +669,7 @@ void go() {
 //   4.x = (0 = look for food | 1 = go back to base) 
 //   4.y = (0 = no food found | 1 = food found)
 //   4.z = harvester type (0 = basic | 1 = sendentary | 2 = nomad)
-//   1.Z = type of coalition (0 = None | 1 = convey coalition)
+//   1.z = type of coalition (0 = None | 1 = convey coalition)
 //   0.x / 0.y = position of the localized food
 //
 // map of the aquaintances:
@@ -742,8 +709,8 @@ class RedHarvester extends Harvester {
       // if one is found next to the robot, collect it
       takeFood(b);
 
-    // if food to deposit or too few energy
-    if ((carryingFood > 200) || (energy < 100))
+    // if food to deposit (when your not a nomad harvester) or too few energy
+    if (( brain[4].z != 2 && (carryingFood > 200)) || (energy < 100))
       // time to go back to the base
       brain[4].x = 1;
 
@@ -763,9 +730,22 @@ class RedHarvester extends Harvester {
             plantSeed();
         }
       }
-    } else
+    }
+    else if (brain[1].z == 1) { //CONVEY COALITION BEHAVIOR 
+    
+      if (brain[4].z == 1) { // sendentary behavior
+      
+      }
+      
+      else if (brain[4].z == 2){ // nomad behavior 
+      
+      }
+    }
+    else { // BASIC BEHAVIOR
+    
       // if not in the "go back" state, explore and collect food
       goAndEat();
+    }
   }
 
   //
@@ -897,9 +877,55 @@ class RedHarvester extends Harvester {
           brain[4].y = 1;
         }
       }
-    }
+      
+        if(msg.type == ASK_FOR_JOINING_COALITION){
+          p.x = msg.args[0]; //type of coalition 
+          p.y = msg.args[1]; //job offer 
+          if(brain[1].z == 0){ // if not in a coalition 
+            if(p.x == 2){ //proporsal of convey colaition
+              if((p.y == 2 && energy > harvesterNrj*3/4) // we accept nomad offer only if we do have at least 75%
+                  || (p.y == 1) ){ // we always accept sedentary offers 
+                harvesterRespondToCoalitionOffer(msg.alice, true);
+              } else { //if the offer doesn't correspon to anything known, decline. 
+                harvesterRespondToCoalitionOffer(msg.alice, false);
+              }
+              
+             }
+          }
+        }
+        
+        if(msg.type == CONFIRM_COALITION_FORMATION){
+          p.x = msg.args[0]; //type of coalition 
+          p.y = msg.args[1]; //final job attribution  
+          if(p.x == 2){ //convey coalition case 
+            brain[1].z = 1; // register the coalition 
+            brain[4].z = p.y; //register its new responsibilities (sendentary or nomad)
+            acquaintances[0] = msg.alice; //register the id of the chief explorer 
+            } 
+        }
+        
+        if(msg.type == CONFIRM_COALITION_FORMATION){
+          p.x = msg.args[0]; //type of coalition 
+          p.y = msg.args[1]; //final job attribution  
+          if(p.x == 2){ //convey coalition case 
+            brain[1].z = 1; // register the coalition 
+            brain[4].z = p.y; //register its new responsibilities (sendentary or nomad)
+            acquaintances[0] = msg.alice; //register the id of the chief explorer 
+            } 
+        }
+        
+      }
+      
     // clear the message queue
     flushMessages();
+  }
+  
+  void quitCoalition(){
+    brain[1].z = 0;
+    brain[4].z = 0;
+    for(int i = 0; i<acquaintances.length ; i++){
+      acquaintances[i] = -1;
+    }
   }
   
    // ---------- COMMUNICATION SPECIFIC FUNCTIONS FOR RED_HARVESTER------------//
@@ -911,23 +937,15 @@ class RedHarvester extends Harvester {
       // build the message...
       float[] args = new float[1];
       args[0] = accepted ? 1 : 0; 
-      Message msg = new Message(RESPOND_TO_COALITION_OFFER, who, bob.who, args);
-      // ...and add it to bob's messages queue
-      bob.messages.add(msg);
+      sendMessage(bob.who, RESPOND_TO_COALITION_OFFER, args);
     }
   }
   
   void harvesterRespondToCoalitionOffer(int id, boolean accepted){
-    Robot bob = game.getRobot(id);
-    // check that bob exists and distance is less than max range
-    if ((bob != null) && (distance(bob) < messageRange)) {
       // build the message...
       float[] args = new float[1];
       args[0] = accepted ? 1 : 0; 
-      Message msg = new Message(RESPOND_TO_COALITION_OFFER, who, bob.who, args);
-      // ...and add it to bob's messages queue
-      bob.messages.add(msg);
-    }
+      sendMessage(id, RESPOND_TO_COALITION_OFFER, args);
   }
   
   
@@ -937,22 +955,14 @@ class RedHarvester extends Harvester {
     if ((bob != null) && (distance(bob) < messageRange)) {
       // build the message...
       float[] args = new float[0]; 
-      Message msg = new Message(INFORM_ABOUT_DISSOLVING_COALITION, who, bob.who, args);
-      // ...and add it to bob's messages queue
-      bob.messages.add(msg);
+      sendMessage(bob.who, INFORM_ABOUT_DISSOLVING_COALITION, args);
     }
   }
   
    void harvesterDissolveCoalition(int id){
-    Robot bob = game.getRobot(id);
-    // check that bob exists and distance is less than max range
-    if ((bob != null) && (distance(bob) < messageRange)) {
       // build the message...
       float[] args = new float[0]; 
-      Message msg = new Message(INFORM_ABOUT_DISSOLVING_COALITION, who, bob.who, args);
-      // ...and add it to bob's messages queue
-      bob.messages.add(msg);
-    }
+      sendMessage(id, INFORM_ABOUT_DISSOLVING_COALITION, args);
   }
   
   void harvesterSayHi(Robot bob){
@@ -962,24 +972,16 @@ class RedHarvester extends Harvester {
       float[] args = new float[2]; 
       args[0] = pos.x;
       args[1] = pos.y; 
-      Message msg = new Message(HI_THERE, who, bob.who, args);
-      // ...and add it to bob's messages queue
-      bob.messages.add(msg);
+      sendMessage(bob.who, HI_THERE, args);
     }
   }
   
   void harvesterSayHi(int id){
-    Robot bob = game.getRobot(id);
-    // check that bob exists and distance is less than max range
-    if ((bob != null) && (distance(bob) < messageRange)) {
       // build the message...
       float[] args = new float[2]; 
       args[0] = pos.x;
       args[1] = pos.y;
-      Message msg = new Message(HI_THERE, who, bob.who, args);
-      // ...and add it to bob's messages queue
-      bob.messages.add(msg);
-    }
+      sendMessage(id, HI_THERE, args);
   }
    // ---------- END OF COMMUNICATION SPECIFIC FUNCTIONS FOR RED_HARVESTER ------------//
    
