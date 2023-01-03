@@ -107,20 +107,19 @@ class RedBase extends Base {
       newFafs(10);
 
     // if ennemy rocket launcher in the area of perception
-    Robot bob = (Robot)minDist(perceiveRobots(ennemy, LAUNCHER));
+    Robot bob = (Robot)minDist(perceiveRobots(ennemy));
     if (bob != null) {
       // call for help
       System.out.println("Base " + who + " is calling for help at " + pos.x + ", " + pos.y); 
-      float[] args = new float[3];
-      args[0] = bob.pos.x;
-      args[1] = bob.pos.y;
-      args[2] = colour;
+      float[] args = new float[2];
+      args[0] = who;
+      args[1] = colour;
+      // for each explorer in range
       ArrayList<Robot> explorers = perceiveRobots(friend, EXPLORER);  
       if (explorers != null) {
         for (int i = 0; i < explorers.size(); i++) {
-          if (explorers.get(i).brain[1].z == 1) {
-             sendMessage(explorers.get(i).who, 14, args);
-         }
+          // ask the type of their coalition (0 no coalition, 1 attack coalition, 2 harvest coalition)
+             sendMessage(explorers.get(i).who, 140, args);
         }
       }
       
@@ -153,6 +152,15 @@ class RedBase extends Base {
           // gives the requested amount of bullets only if at least 1000 units of energy left after
           giveBullets(msg.alice, msg.args[0]);
         }
+      } else if (msg.type == 141 && msg.args[1] == colour) {
+        // if the explorer is in an attack coalition send message to order defense
+          if (msg.args[0] == 1) {
+            float[] arg = new float[3];
+            arg[0] = pos.x;  // position of the sender
+            arg[1] = pos.y;  // position of the sender
+            arg[2] = colour;  // colour of the sender
+            sendMessage(msg.alice, 14, arg);
+          }
       }
     }
     // clear the message queue
@@ -610,6 +618,14 @@ void go() {
         arg[5]=colour;
         sendMessage((int)msg.args[0], 181, arg); //sends the requested informations to the rocket
       }
+      else if (msg.type == 140 && msg.args[1]==colour) //if the explorer receives a "request coalition type" message from a robot
+      {
+        System.out.println("Explorer "+who+" : receiving request for coalition informations");
+        float[] arg = new float[2];
+        arg[0]=brain[1].z; // coalition state
+        arg[1]=colour; // colour of the sender
+        sendMessage((int)msg.args[0], 141, arg);
+      }
     }
     // clear the message queue
     flushMessages();
@@ -656,20 +672,20 @@ class RedHarvester extends Harvester {
     // handle messages received
     handleMessages();
     
-    Robot enemyLauncher = (Robot)minDist(perceiveRobots(ennemy, LAUNCHER));
+    Robot enemyLauncher = (Robot)minDist(perceiveRobots(ennemy));
     if (enemyLauncher != null) {
     // call for help
+      // call for help
       System.out.println("Harvester " + who + " is calling for help at " + pos.x + ", " + pos.y); 
-      float[] args = new float[3];
-      args[0] = enemyLauncher.pos.x;
-      args[1] = enemyLauncher.pos.y;
-      args[2] = colour;
+      float[] args = new float[2];
+      args[0] = who;
+      args[1] = colour;
+      // for each explorer in range
       ArrayList<Robot> explorers = perceiveRobots(friend, EXPLORER);  
       if (explorers != null) {
         for (int i = 0; i < explorers.size(); i++) {
-          if (explorers.get(i).brain[1].z == 1) {
-             sendMessage(explorers.get(i).who, 14, args);
-          }
+          // ask the type of their coalition (0 no coalition, 1 attack coalition, 2 harvest coalition)
+             sendMessage(explorers.get(i).who, 140, args);
         }
       }
     }
@@ -849,6 +865,15 @@ class RedHarvester extends Harvester {
           // update the corresponding flag
           brain[4].y = 1;
         }
+      } else if (msg.type == 141 && msg.args[1] == colour) {
+        // if the explorer is in an attack coalition send message to order defense
+          if (msg.args[0] == 1) {
+            float[] arg = new float[3];
+            arg[0] = pos.x;  // position of the sender
+            arg[1] = pos.y;  // position of the sender
+            arg[2] = colour;  // colour of the sender
+            sendMessage(msg.alice, 14, arg);
+          }
       }
     }
     // clear the message queue
