@@ -208,6 +208,9 @@ class RedExplorer extends Explorer {
   // > defines the behavior of the agent
   //
 void go() {
+    
+    handleMessages();
+    
     // if food to deposit or too few energy
     if ((carryingFood > 200) || (energy < 100))
       // time to go back to base
@@ -580,6 +583,75 @@ void go() {
       forward(speed);
   }
   
+  void quitCoalition(){
+    brain[1].z = 0;
+    brain[2].z = 0; // reset coalition proporsal if not done yet 
+    for(int i = 0; i<acquaintances.length ; i++){ //reset acquaintances and inform them about dissolving
+      explorerDissolveCoalition(acquaintances[i]);
+      acquaintances[i] = -1;
+    }
+  }
+  
+  //
+  // handleMessages
+  // ==============
+  // > handle messages received
+  //
+  void handleMessages() {
+    PVector p = new PVector();
+    Message msg;
+    // for all messages
+    for (int i=0; i<messages.size(); i++) {
+      // get next message
+      msg = messages.get(i);
+      // if "localized target" message
+      
+      if (msg.type == INFORM_ABOUT_TARGET) {
+        System.out.println("Rocket Launcher : Target information received");
+        // record the position of the target
+        brain[0].x = msg.args[0];
+        brain[0].y = msg.args[1];
+        brain[0].z = msg.args[2];
+        brain[4].x=0;
+        brain[4].y=1;
+        //change heading to target :
+        heading = towards(brain[0]);
+      }
+      
+      if(msg.type == HI_THERE){
+          p.x = msg.args[0]; //x coordinate of alice
+          p.y = msg.args[1]; //y coordinate of alice 
+          if(brain[4].z == 2){
+            if(msg.alice == acquaintances[0]){ // if the one to say HI is the sedentary harvester : 
+              // TODO : reset coalition expiration timer 
+              //update sedentary position : 
+              brain[2].x = p.x;
+              brain[2].y = p.y;
+              harvesterSayHi(msg.alice); //say hi back to sendentary haverster. 
+              } 
+            if(msg.alice == acquaintances[1]){ // if the one to say HI is the nomad haverster
+              // TODO : reset coalition expiration timer 
+              //update nomad position : 
+              brain[1].x = p.x;
+              brain[1].y = p.y;
+              harvesterSayHi(msg.alice); //say hi back to nomad haverster. 
+            }
+          }
+            
+        }
+        
+        if(msg.type == INFORM_ABOUT_DISSOLVING_COALITION){
+          quitCoalition();
+        }
+      
+      
+      
+      
+    }
+    // clear the message queue
+    flushMessages();
+  }
+  
   // ---------- COMMUNICATION SPECIFIC FUNCTIONS FOR RED_EXPLORER ------------//
   
   //Message used in order to suggest the creation of a new coalition to other robots, with this explorer as chief.
@@ -861,6 +933,7 @@ class RedHarvester extends Harvester {
     for (int i=0; i<messages.size(); i++) {
       // get next message
       msg = messages.get(i);
+      
       // if "localized food" message
       if (msg.type == INFORM_ABOUT_FOOD) {
         // record the position of the burger
@@ -904,14 +977,17 @@ class RedHarvester extends Harvester {
             } 
         }
         
-        if(msg.type == CONFIRM_COALITION_FORMATION){
-          p.x = msg.args[0]; //type of coalition 
-          p.y = msg.args[1]; //final job attribution  
-          if(p.x == 2){ //convey coalition case 
-            brain[1].z = 1; // register the coalition 
-            brain[4].z = p.y; //register its new responsibilities (sendentary or nomad)
-            acquaintances[0] = msg.alice; //register the id of the chief explorer 
+        if(msg.type == HI_THERE){
+          p.x = msg.args[0]; //x coordinate of alice
+          p.y = msg.args[1]; //y coordinate of alice 
+          if(msg.alice == acquaintances[0]){ // if the one to say HI is the coalition chief : 
+            // TODO : reset coalition expiration timer 
+            harvesterSayHi(msg.alice); //say hi back to the chief. 
             } 
+        }
+        
+        if(msg.type == INFORM_ABOUT_DISSOLVING_COALITION){
+          quitCoalition();
         }
         
       }
