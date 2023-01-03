@@ -1151,7 +1151,7 @@ class RedRocketLauncher extends RocketLauncher {
       else if(msg.type == 181 && msg.args[5]==colour) //reception of explorer coalition informations
       {
         System.out.println("Rocket "+who+" : received coalition informations from Explorer "+msg.args[0]);
-        if(msg.args[1]<2 && msg.args[2]!=1) //if the received information is valid, we form a coalition
+        if(msg.args[1]<2 && msg.args[2]!=1) //if the received information is valid, we form a coalition //ALEXANDRE NEEDS TO CHNAGE !=1 TO SOMETHING ELSE (PROBABLY ==1)
         {
           System.out.println("Rocket "+who+" : sending link message request to explorer "+msg.args[0]);
           float[] arg = new float[2];
