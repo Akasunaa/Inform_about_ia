@@ -1094,7 +1094,7 @@ class RedRocketLauncher extends RocketLauncher {
     //MESSAGE VERSION :
     if(acquaintances[1]>0) //if the rocket has a team leader (explorer) we demand its position
     {
-      float[] arg = new float[1];
+      float[] arg = new float[2];
       arg[0]=who;
       arg[1]=colour;
       sendMessage(acquaintances[1],11,arg); //request position update
