@@ -198,19 +198,19 @@ void go() {
       if(energy < 50) //if the explorer has too low of an energy and its going to die, we dissolve the coalition
       {
         //DISSOLVE COALITION
-        System.out.println("Explorer : dissolving coalition XECTFYGVHUBKL?M.%/");
+        System.out.println("Explorer "+who+" : dissolving coalition");
         float[] arg = new float[1];
         arg[0]=who;
         if(acquaintances[3]>=0)
         { 
-          System.out.println("Explorer : sending dissolve coalition message to rocket "+acquaintances[3]);
+          System.out.println("Explorer "+who+" : sending dissolve coalition message to rocket "+acquaintances[3]);
           sendMessage(acquaintances[3], 13, arg);
           acquaintances[3]=-1;
           brain[1].x--;  
         }
         if(acquaintances[4]>=0)
         {
-          System.out.println("Explorer : sending dissolve coalition message to rocket "+acquaintances[4]);
+          System.out.println("Explorer "+who+" : sending dissolve coalition message to rocket "+acquaintances[4]);
           sendMessage(acquaintances[4], 13, arg);
           acquaintances[4]=-1;
           brain[1].x--;
@@ -545,7 +545,7 @@ void go() {
       }
       else if(msg.type == 12) //tests if the message received is a link-up demand
       {
-        System.out.println("Explorer : link-up demand received");
+        System.out.println("Explorer "+who+": link-up demand received");
         speed = launcherSpeed;
         brain[1].z = 1; //indicates that the explorer is part of the coalition formed by (this) rocket
         brain[1].x++;
@@ -557,6 +557,21 @@ void go() {
         else if(acquaintances[4]<0)
         {
           acquaintances[4]=(int)msg.args[0];
+        }
+      }
+      else if(msg.type==15) //if the explorer receives a "disengage" message from one of its rocket launchers, it will remove it from its memory
+      {
+        System.out.println("Explorer "+who+" : disengage message received");
+        //we store in acquaintances 3 and 4 the id of the rockets of the coalition
+        if(acquaintances[3]==msg.args[0]) 
+        {
+          acquaintances[3]=-1;
+          brain[1].x--;
+        }
+        else if(acquaintances[4]==msg.args[0])
+        {
+          acquaintances[4]=-1;
+          brain[1].x--;
         }
       }
     }
@@ -845,6 +860,19 @@ class RedRocketLauncher extends RocketLauncher {
     
     if(brain[1].z==1) //SQUAD BEHAVIOR
     {
+      if(energy<100) //if the rocket is lacking energy and will soon die, it disengages from the explorer
+      {
+        System.out.println("Rocket "+who+" : disengaging");
+        float[] arg = new float[1];
+        arg[0]=who;
+        sendMessage(acquaintances[1], 15, arg);
+        //we clean up the rocket's memory :
+        acquaintances[1]=-1;
+        brain[1].x = 0;
+        brain[1].y = 0;
+        brain[1].z = 0;
+        return;
+      }
       UpdateExplorer(); //updates position with explorer's
       // handle messages received
       handleMessages();
@@ -1014,7 +1042,7 @@ class RedRocketLauncher extends RocketLauncher {
       Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
       if(explorer!=null && explorer.brain[1].x<2) //right now, we only test if explorer exists && has less than 2 ppl in squad
       {
-        System.out.println("Rocket : sending link message request to explorer "+explorer.who);
+        System.out.println("Rocket "+who+" : sending link message request to explorer "+explorer.who);
         float[] arg = new float[1];
         arg[0]=who;
         acquaintances[1]=explorer.who; //we save in the acquaintances the id of the explorer
