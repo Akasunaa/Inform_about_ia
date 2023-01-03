@@ -110,7 +110,7 @@ class RedBase extends Base {
     Robot bob = (Robot)minDist(perceiveRobots(ennemy));
     if (bob != null) {
       // call for help
-      System.out.println("Base " + who + " is calling for help at " + pos.x + ", " + pos.y); 
+      // System.out.println("Base " + who + " is calling for help at " + pos.x + ", " + pos.y); 
       float[] args = new float[2];
       args[0] = who;
       args[1] = colour;
@@ -154,13 +154,12 @@ class RedBase extends Base {
         }
       } else if (msg.type == 141 && msg.args[1] == colour) {
         // if the explorer is in an attack coalition send message to order defense
-          if (msg.args[0] == 1) { // that means brain[1].z == 1 for the explorer
+          if (msg.args[0] == 1) {
             float[] arg = new float[3];
             arg[0] = pos.x;  // position of the sender
             arg[1] = pos.y;  // position of the sender
             arg[2] = colour;  // colour of the sender
-            sendMessage(msg.alice, 14, arg); // base sends a message to ask the coalition to come help
-            
+            sendMessage(msg.alice, 14, arg);
           }
       }
     }
@@ -587,7 +586,7 @@ void go() {
       }
       else if (msg.type == 14 && msg.args[2] == colour)  //tests if the message received is a call for help
       {
-         System.out.println("Explorer : Received call for help from " + msg.alice + " at " + msg.args[0] + ", " + msg.args[1]);
+         // System.out.println("Explorer : Received call for help from " + msg.alice + " at " + msg.args[0] + ", " + msg.args[1]);
          brain[4].y = 1;
          brain[0].x = msg.args[0];
          brain[0].y = msg.args[1];
@@ -625,7 +624,7 @@ void go() {
         float[] arg = new float[2];
         arg[0]=brain[1].z; // coalition state
         arg[1]=colour; // colour of the sender
-        sendMessage((int)msg.args[0], 141, arg); // returns the message with the information of type of the coalition
+        sendMessage((int)msg.args[0], 141, arg);
       }
     }
     // clear the message queue
@@ -676,7 +675,8 @@ class RedHarvester extends Harvester {
     Robot enemyLauncher = (Robot)minDist(perceiveRobots(ennemy));
     if (enemyLauncher != null) {
     // call for help
-      System.out.println("Harvester " + who + " is calling for help at " + pos.x + ", " + pos.y); 
+      // call for help
+      // System.out.println("Harvester " + who + " is calling for help at " + pos.x + ", " + pos.y); 
       float[] args = new float[2];
       args[0] = who;
       args[1] = colour;
@@ -872,7 +872,7 @@ class RedHarvester extends Harvester {
             arg[0] = pos.x;  // position of the sender
             arg[1] = pos.y;  // position of the sender
             arg[2] = colour;  // colour of the sender
-            sendMessage(msg.alice, 14, arg); // harvester sends a message to the attack coalition to ask them to come help 
+            sendMessage(msg.alice, 14, arg);
           }
       }
     }
@@ -1176,7 +1176,7 @@ class RedRocketLauncher extends RocketLauncher {
       else if(msg.type == 181 && msg.args[5]==colour) //reception of explorer coalition informations
       {
         System.out.println("Rocket "+who+" : received coalition informations from Explorer "+msg.args[0]);
-        if(msg.args[1]<2 && msg.args[2]!=1) //if the received information is valid, we form a coalition //ALEXANDRE NEEDS TO CHNAGE !=1 TO SOMETHING ELSE (PROBABLY ==1)
+        if(msg.args[1]<2 && msg.args[2]!=1) //if the received information is valid, we form a coalition
         {
           System.out.println("Rocket "+who+" : sending link message request to explorer "+msg.args[0]);
           float[] arg = new float[2];
