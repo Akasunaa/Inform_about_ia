@@ -105,19 +105,19 @@ class RedBase extends Base {
       newFafs(10);
 
     // if ennemy rocket launcher in the area of perception
-    Robot bob = (Robot)minDist(perceiveRobots(ennemy, LAUNCHER));
+    Robot bob = (Robot)minDist(perceiveRobots(ennemy));
     if (bob != null) {
       // call for help
       //System.out.println("Base " + who + " is calling for help at " + pos.x + ", " + pos.y); 
       float[] args = new float[2];
-      args[0] = bob.pos.x;
-      args[1] = bob.pos.y;
+      args[0] = who;
+      args[1] = colour;
+      // for each explorer in range
       ArrayList<Robot> explorers = perceiveRobots(friend, EXPLORER);  
       if (explorers != null) {
         for (int i = 0; i < explorers.size(); i++) {
-          if (explorers.get(i).brain[1].z == 1) {
-             sendMessage(explorers.get(i).who, 14, args);
-         }
+          // ask the type of their coalition (0 no coalition, 1 attack coalition, 2 harvest coalition)
+             sendMessage(explorers.get(i).who, 140, args);
         }
       }
       
@@ -150,6 +150,15 @@ class RedBase extends Base {
           // gives the requested amount of bullets only if at least 1000 units of energy left after
           giveBullets(msg.alice, msg.args[0]);
         }
+      } else if (msg.type == 141 && msg.args[1] == colour) {
+        // if the explorer is in an attack coalition send message to order defense
+          if (msg.args[0] == 1) {
+            float[] arg = new float[3];
+            arg[0] = pos.x;  // position of the sender
+            arg[1] = pos.y;  // position of the sender
+            arg[2] = colour;  // colour of the sender
+            sendMessage(msg.alice, 14, arg);
+          }
       }
     }
     // clear the message queue
@@ -580,14 +589,14 @@ void go() {
           acquaintances[4]=(int)msg.args[0];
         }
       }
-      else if (msg.type == 14)  //tests if the message received is a call for help
+      else if (msg.type == 14 && msg.args[2] == colour)  //tests if the message received is a call for help
       {
          System.out.println("Explorer : Received call for help from " + msg.alice + " at " + msg.args[0] + ", " + msg.args[1]);
          brain[4].y = 1;
          brain[0].x = msg.args[0];
          brain[0].y = msg.args[1];
       }
-      else if(msg.type==15 && msg.args[1]==colour) //if the explorer receives a "disengage" message from one of its rocket launchers, it will remove it from its memory
+      else if(msg.type == 15 && msg.args[1] == colour) //if the explorer receives a "disengage" message from one of its rocket launchers, it will remove it from its memory
       {
         //System.out.println("Explorer "+who+" : disengage message received");
         //we store in acquaintances 3 and 4 the id of the rockets of the coalition
@@ -601,6 +610,26 @@ void go() {
           acquaintances[4]=-1;
           brain[1].x--;
         }
+      }
+      else if(msg.type == 180 && msg.args[1]==colour) //if the explorer receives a "request coalition informations" message from one rocket that requests the informations from the explorer
+      {
+        System.out.println("Explorer "+who+" : receiving request for coalition informations");
+        float[] arg = new float[6];
+        arg[0]=who;
+        arg[1]=brain[1].x;
+        arg[2]=brain[4].z;
+        arg[3]=pos.x;
+        arg[4]=pos.y;
+        arg[5]=colour;
+        sendMessage((int)msg.args[0], 181, arg); //sends the requested informations to the rocket
+      }
+      else if (msg.type == 140 && msg.args[1]==colour) //if the explorer receives a "request coalition type" message from a robot
+      {
+        System.out.println("Explorer "+who+" : receiving request for coalition informations");
+        float[] arg = new float[2];
+        arg[0]=brain[1].z; // coalition state
+        arg[1]=colour; // colour of the sender
+        sendMessage((int)msg.args[0], 141, arg);
       }
     }
     // clear the message queue
@@ -651,17 +680,16 @@ class RedHarvester extends Harvester {
     // COALITION OR STANDALONE : Call for help
     Robot enemyLauncher = (Robot)minDist(perceiveRobots(ennemy, LAUNCHER));
     if (enemyLauncher != null) {
-
-      //System.out.println("Harvester " + who + " is calling for help at " + pos.x + ", " + pos.y); 
+      System.out.println("Harvester " + who + " is calling for help at " + pos.x + ", " + pos.y); 
       float[] args = new float[2];
-      args[0] = enemyLauncher.pos.x;
-      args[1] = enemyLauncher.pos.y;
+      args[0] = who;
+      args[1] = colour;
+      // for each explorer in range
       ArrayList<Robot> explorers = perceiveRobots(friend, EXPLORER);  
       if (explorers != null) {
         for (int i = 0; i < explorers.size(); i++) {
-          if (explorers.get(i).brain[1].z == 1) {
-             sendMessage(explorers.get(i).who, 14, args);
-          }
+          // ask the type of their coalition (0 no coalition, 1 attack coalition, 2 harvest coalition)
+             sendMessage(explorers.get(i).who, 140, args);
         }
       }
     }
@@ -845,6 +873,15 @@ class RedHarvester extends Harvester {
           // update the corresponding flag
           brain[4].y = 1;
         }
+      } else if (msg.type == 141 && msg.args[1] == colour) {
+        // if the explorer is in an attack coalition send message to order defense
+          if (msg.args[0] == 1) {
+            float[] arg = new float[3];
+            arg[0] = pos.x;  // position of the sender
+            arg[1] = pos.y;  // position of the sender
+            arg[2] = colour;  // colour of the sender
+            sendMessage(msg.alice, 14, arg);
+          }
       }
     }
     // clear the message queue
@@ -933,6 +970,8 @@ class RedRocketLauncher extends RocketLauncher {
     }
     else //STANDARD ALONE BEHAVIOR
     {
+      // handle messages received
+      handleMessages();
       if(FindExplorer())//when alone, a rocket will try to find an explorer to link to
       {
         return; //if a leader's been found, we avoid doing the standard alone behavior
@@ -1079,17 +1118,15 @@ class RedRocketLauncher extends RocketLauncher {
   {
     // try to find a suitable coalition leader :
       Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
-      if(explorer!=null && explorer.brain[1].x<2 && explorer.brain[4].z!=1) //right now, we only test if explorer exists && has less than 2 ppl in squad && is not in other coalition
+      if(explorer!=null) //if an explorer is found, we request from it informations that will tell the rocket wether or not a coalition can be formed
       {
         //System.out.println("Rocket "+who+" : sending link message request to explorer "+explorer.who);
+
         float[] arg = new float[2];
         arg[0]=who;
         arg[1]=colour;
-        acquaintances[1]=explorer.who; //we save in the acquaintances the id of the explorer
-        brain[1].x = explorer.pos.x;
-        brain[1].y = explorer.pos.y;
-        brain[1].z = 1;
-        sendMessage(explorer.who, 12, arg); //send a link-up request message is sent to the explorer
+        System.out.println("Rocket "+who+" : sending request for coalition information from the explorer");
+        sendMessage(explorer.who, 180, arg); //we try to send a message to an explorer in the vicinity to obtain informations
         return true;
       }
       return false;
@@ -1145,6 +1182,22 @@ class RedRocketLauncher extends RocketLauncher {
         //System.out.println("Rocket "+who+" : received dissolution message from Explorer "+msg.args[0]);
         brain[1].z=0;
         acquaintances[1]=-1;
+      }
+      else if(msg.type == 181 && msg.args[5]==colour) //reception of explorer coalition informations
+      {
+        System.out.println("Rocket "+who+" : received coalition informations from Explorer "+msg.args[0]);
+        if(msg.args[1]<2 && msg.args[2]!=1) //if the received information is valid, we form a coalition //ALEXANDRE NEEDS TO CHNAGE !=1 TO SOMETHING ELSE (PROBABLY ==1)
+        {
+          System.out.println("Rocket "+who+" : sending link message request to explorer "+msg.args[0]);
+          float[] arg = new float[2];
+          arg[0]=who;
+          arg[1]=colour;
+          acquaintances[1]=(int)msg.args[0];//we save in the acquaintances the id of the explorer
+          brain[1].x = msg.args[3];
+          brain[1].y = msg.args[4];
+          brain[1].z = 1;
+          sendMessage((int)msg.args[0], 12, arg); //send a link-up request message is sent to the explorer
+        }
       }
     }
     // clear the message queue
