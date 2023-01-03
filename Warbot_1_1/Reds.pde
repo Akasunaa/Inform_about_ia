@@ -336,25 +336,28 @@ void go() {
   {
     if(target!=null)
     {
-      ArrayList<RocketLauncher> rockets = (ArrayList<RocketLauncher>)perceiveRobots(friend,LAUNCHER); //RIGHT NOW, we assume that all rockets in vicinity are part of the team -> should include a way to either directly communicate, or see if they are indeed part of the team
+      ArrayList<RocketLauncher> rockets = (ArrayList<RocketLauncher>)perceiveRobots(friend,LAUNCHER); //we detect all the present friendly rocket launchers
       if(rockets!=null){
         for(int i=0;i<rockets.size();i++)
         {
-          //System.out.println("Explorer : sending msg to rocket "+rockets.get(i));
-          informAboutTarget(rockets.get(i),target);
-          //rockets.get(i).brain[2].z=1;
+          if(rockets.get(i).who == acquaintances[3] || rockets.get(i).who == acquaintances[4]) //if the detected rocket is part of the team, send a message
+          {
+            informAboutTarget(rockets.get(i),target);
+          }
         }
       }
     }
     else //if no target found, we tell the rockets that they have no target
     {
-      ArrayList<RocketLauncher> rockets = (ArrayList<RocketLauncher>)perceiveRobots(friend,LAUNCHER); //RIGHT NOW, we assume that all rockets in vicinity are part of the team -> should include a way to either directly communicate, or see if they are indeed part of the team
+      ArrayList<RocketLauncher> rockets = (ArrayList<RocketLauncher>)perceiveRobots(friend,LAUNCHER); //we detect all the present friendly rocket launchers
       if(rockets!=null)
       {
         for(int i=0;i<rockets.size();i++)
         {
-          //informAboutTarget(rockets.get(i),null);
-          rockets.get(i).brain[4].y=0;
+          if(rockets.get(i).who == acquaintances[3] || rockets.get(i).who == acquaintances[4]) //if the detected rocket is part of the team, tell them that they have no target
+          {
+            rockets.get(i).brain[4].y=0;
+          }
         }
       }
     }
@@ -522,6 +525,15 @@ void go() {
         speed = launcherSpeed;
         brain[1].z = 1; //indicates that the explorer is part of the coalition formed by (this) rocket
         brain[1].x++;
+        //we store in acquaintances 3 and 4 the id of the rockets of the coalition
+        if(acquaintances[3]<0) 
+        {
+          acquaintances[3]=(int)msg.args[0];
+        }
+        else if(acquaintances[4]<0)
+        {
+          acquaintances[4]=(int)msg.args[0];
+        }
       }
     }
     // clear the message queue
