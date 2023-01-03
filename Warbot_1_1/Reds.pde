@@ -193,8 +193,32 @@ void go() {
     if(brain[1].z==1) //COALITION BEHAVIOR
     {
       LocateEnemy();
-      if(energy < 100){
-        brain[4].x = 1;}
+      if(energy < 100)
+      {
+        brain[4].x = 1;
+      }
+      else if(energy<20) //if the explorer has too low of an energy and its going to die, we dissolve the coalition
+      {
+        //DISSOLVE COALITION
+        System.out.println("Explorer : dissolving coalition");
+        float[] arg = new float[1];
+        arg[0]=who;
+        if(acquaintances[3]!=0)
+        { 
+          System.out.println("Explorer : sending dissolve coalition message to rocket "+acquaintances[3]);
+          sendMessage(acquaintances[3], 13, arg);
+          acquaintances[3]=-1;
+          brain[1].x--;  
+        }
+        if(acquaintances[4]!=0)
+        {
+          System.out.println("Explorer : sending dissolve coalition message to rocket "+acquaintances[4]);
+          sendMessage(acquaintances[4], 13, arg);
+          acquaintances[4]=-1;
+          brain[1].x--;
+        }
+        brain[1].z=0;
+      }
       //In coalition, the explorer will attempt to locate enemies, by classing them in priority, and then transmit that target to the team's rocket launchers
       else if(brain[4].y == 1) //if a target has been set, we move towards the target to give rockets time to attack
       {
@@ -361,7 +385,6 @@ void go() {
         }
       }
     }
-    
   }
 
   //
@@ -1018,7 +1041,11 @@ class RedRocketLauncher extends RocketLauncher {
         brain[1].x = msg.args[0];
         brain[1].y = msg.args[1];
       }
-      
+      else if(msg.type==13) //reception of dissolution message
+      {
+        brain[1].z=0;
+        acquaintances[1]=-1;
+      }
     }
     // clear the message queue
     flushMessages();
