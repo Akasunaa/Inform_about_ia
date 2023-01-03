@@ -213,8 +213,9 @@ void go() {
         //DISSOLVE COALITION
         //System.out.println("Explorer : dissolving coalition");
         System.out.println("Explorer "+who+" : dissolving coalition");
-        float[] arg = new float[1];
+        float[] arg = new float[2];
         arg[0]=who;
+        arg[1]=colour;
         if(acquaintances[3]>=0)
         { 
           System.out.println("Explorer "+who+" : sending dissolve coalition message to rocket "+acquaintances[3]);
@@ -548,16 +549,17 @@ void go() {
       // get next message
       msg = messages.get(i);
       // if "leader position update" message
-      if (msg.type == 11) //tests if the message received is a position update demand from a rocket 
+      if (msg.type == 11 && msg.args[1]==colour) //tests if the message received is a position update demand from a rocket 
       {
         //System.out.println("Explorer : position update demand received");
-        float[] arg = new float[2];
+        float[] arg = new float[3];
         arg[0]=pos.x;
         arg[1]=pos.y;
+        arg[2]=colour;
         //System.out.println("Explorer : sending position update");
         sendMessage((int)msg.args[0],10,arg); //sending msg to rocket
       }
-      else if(msg.type == 12) //tests if the message received is a link-up demand
+      else if(msg.type == 12 && msg.args[1]==colour) //tests if the message received is a link-up demand
       {
         System.out.println("Explorer "+who+": link-up demand received");
         speed = launcherSpeed;
@@ -580,7 +582,7 @@ void go() {
          brain[0].x = msg.args[0];
          brain[0].y = msg.args[1];
       }
-      else if(msg.type==15) //if the explorer receives a "disengage" message from one of its rocket launchers, it will remove it from its memory
+      else if(msg.type==15 && msg.args[1]==colour) //if the explorer receives a "disengage" message from one of its rocket launchers, it will remove it from its memory
       {
         System.out.println("Explorer "+who+" : disengage message received");
         //we store in acquaintances 3 and 4 the id of the rockets of the coalition
@@ -889,8 +891,9 @@ class RedRocketLauncher extends RocketLauncher {
       if(energy<100) //if the rocket is lacking energy and will soon die, it disengages from the explorer
       {
         System.out.println("Rocket "+who+" : disengaging");
-        float[] arg = new float[1];
+        float[] arg = new float[2];
         arg[0]=who;
+        arg[1]=colour;
         sendMessage(acquaintances[1], 15, arg);
         //we clean up the rocket's memory :
         acquaintances[1]=-1;
@@ -1069,8 +1072,9 @@ class RedRocketLauncher extends RocketLauncher {
       if(explorer!=null && explorer.brain[1].x<2 && explorer.brain[4].z!=1) //right now, we only test if explorer exists && has less than 2 ppl in squad && is not in other coalition
       {
         System.out.println("Rocket "+who+" : sending link message request to explorer "+explorer.who);
-        float[] arg = new float[1];
+        float[] arg = new float[2];
         arg[0]=who;
+        arg[1]=colour;
         acquaintances[1]=explorer.who; //we save in the acquaintances the id of the explorer
         brain[1].x = explorer.pos.x;
         brain[1].y = explorer.pos.y;
@@ -1092,6 +1096,7 @@ class RedRocketLauncher extends RocketLauncher {
     {
       float[] arg = new float[1];
       arg[0]=who;
+      arg[1]=colour;
       sendMessage(acquaintances[1],11,arg); //request position update
     }
   }
@@ -1120,13 +1125,14 @@ class RedRocketLauncher extends RocketLauncher {
         //change heading to target :
         heading = towards(brain[0]);
       }
-      else if(msg.type == 10) //réception message d'update de position du leader
+      else if(msg.type == 10 && msg.args[2]==colour) //réception message d'update de position du leader
       {
         brain[1].x = msg.args[0];
         brain[1].y = msg.args[1];
       }
-      else if(msg.type==13) //reception of dissolution message
+      else if(msg.type==13 && msg.args[1]==colour) //reception of dissolution message
       {
+        System.out.println("Rocket "+who+" : received dissolution message from Explorer "+msg.args[0]);
         brain[1].z=0;
         acquaintances[1]=-1;
       }
