@@ -521,7 +521,7 @@ void go() {
         System.out.println("Explorer : link-up demand received");
         speed = launcherSpeed;
         brain[1].z = 1; //indicates that the explorer is part of the coalition formed by (this) rocket
-        explorer.brain[1].x++;
+        brain[1].x++;
       }
     }
     // clear the message queue
