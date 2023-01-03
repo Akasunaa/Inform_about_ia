@@ -40,21 +40,14 @@ class RedBase extends Base {
   //
   void setup() {
     // creates a new harvester
-    newHarvester();
+    //newHarvester();
     // 7 more harvesters to create
     brain[5].x = 7;
+    brain[5].y = 4;
+    brain[5].z = 2;
   }
-
-  //
-  // go
-  // ==
-  // > called at each iteration of the game
-  // > defines the behavior of the agent
-  //
-  void go() {
-    // handle received messages 
-    handleMessages();
-
+  
+  void chooseNewRobot(){
     // creates new robots depending on energy and the state of brain[5]
     if ((brain[5].x > 0) && (energy >= 1000 + harvesterCost)) {
       // 1st priority = creates harvesters 
@@ -68,9 +61,19 @@ class RedBase extends Base {
       // 3rd priority = creates explorers 
       if (newExplorer())
         brain[5].z--;
-    } else if (energy > 12000) {
+    } 
+    //No priority : random
+    else if (energy > 12000) {
+      ArrayList seeds = perceiveSeeds(friend);
+      ArrayList robots = perceiveRobots(friend, HARVESTER);
+
+      if(seeds!=null && robots!=null)
+          if(seeds.size()>150 && robots.size()>4) //lot of harvest
+            brain[5].y++;
+          else if(seeds.size()<50)
+            brain[5].x++;        
       // if no robot in the pipe and enough energy 
-      if ((int)random(2) == 0)
+      else if ((int)random(2) == 0)
         // creates a new harvester with 50% chance
         brain[5].x++;
       else if ((int)random(2) == 0)
@@ -80,7 +83,18 @@ class RedBase extends Base {
         // creates a new explorer with 25% chance
         brain[5].z++;
     }
+  }
 
+  //
+  // go
+  // ==
+  // > called at each iteration of the game
+  // > defines the behavior of the agent
+  //
+  void go() {
+    // handle received messages 
+    handleMessages();
+    chooseNewRobot();
     // creates new bullets and fafs if the stock is low and enought energy
     if ((bullets < 10) && (energy > 1000))
       newBullets(50);
@@ -136,6 +150,7 @@ class RedBase extends Base {
 //   4.y = (0 = no target | 1 = locked target)
 //   0.x / 0.y = coordinates of the target
 //   0.z = type of the target
+//   1.x = number of rockets in the coalition (2 max)
 //   1.z = if in a coalition
 ///////////////////////////////////////////////////////////////////////////
 class RedExplorer extends Explorer {
@@ -153,6 +168,7 @@ class RedExplorer extends Explorer {
   // > called at the creation of the agent
   //
   void setup() {
+    brain[1].x=0;
   }
 
   //
@@ -162,6 +178,13 @@ class RedExplorer extends Explorer {
   // > defines the behavior of the agent
   //
 void go() {
+    //if die
+    if(energy<50){
+        Base bob = (Base)minDist(myBases);
+        if (bob != null) 
+            bob.brain[5].z+=1;      
+    }
+  handleMessages();
     // if food to deposit or too few energy
     if ((carryingFood > 200) || (energy < 100))
       // time to go back to base
@@ -172,7 +195,34 @@ void go() {
     {
       //In coalition, the explorer will attempt to locate enemies, by classing them in priority, and then transmit that target to the team's rocket launchers
       LocateEnemy();
-      if(brain[4].y == 1) //if a target has been set, we move towards the target to give rockets time to attack
+      if(energy < 50) //if the explorer has too low of an energy and its going to die, we dissolve the coalition
+      {
+        //DISSOLVE COALITION
+        System.out.println("Explorer "+who+" : dissolving coalition");
+        float[] arg = new float[2];
+        arg[0]=who;
+        arg[1]=colour;
+        if(acquaintances[3]>=0)
+        { 
+          System.out.println("Explorer "+who+" : sending dissolve coalition message to rocket "+acquaintances[3]);
+          sendMessage(acquaintances[3], 13, arg);
+          acquaintances[3]=-1;
+          brain[1].x--;  
+        }
+        if(acquaintances[4]>=0)
+        {
+          System.out.println("Explorer "+who+" : sending dissolve coalition message to rocket "+acquaintances[4]);
+          sendMessage(acquaintances[4], 13, arg);
+          acquaintances[4]=-1;
+          brain[1].x--;
+        }
+        brain[1].z=0;
+      }
+      if(energy < 100)
+      {
+        brain[4].x = 1;
+      }
+      else if(brain[4].y == 1) //if a target has been set, we move towards the target to give rockets time to attack
       {
         tryToMoveForward();
       }
@@ -226,7 +276,7 @@ void go() {
       //changes heading :
       heading = towards(brain[0]);
       //sends message to rockets
-      System.out.println("Explorer : target found, transmitting to rockets");
+      //System.out.println("Explorer : target found, transmitting to rockets");
       TransmitTargetToTeam(bob);
     } else
       // no target found
@@ -243,7 +293,7 @@ void go() {
   //
   Robot ClassifyEnemy()
   {
-    ArrayList<Robot> detectedEnemies = perceiveRobots(ennemy);
+    ArrayList<Robot> detectedEnemies = perceiveRobots(ennemy); //store all detected enemies
     HashMap<Integer, ArrayList<Integer>> enemyMap = new HashMap<Integer,ArrayList<Integer>>(); //we're storing all the accessible bots in a hashmap int,ArrayList<int> where the key indicates the priority (1 for harv, 4 for explor) and the arrayList all the robots of said priority
     enemyMap.put(1,new ArrayList<Integer>());
     enemyMap.put(2,new ArrayList<Integer>());
@@ -251,7 +301,7 @@ void go() {
     enemyMap.put(4,new ArrayList<Integer>());
     if(detectedEnemies!=null)
     {
-      for(int i=0;i<detectedEnemies.size();i++)
+      for(int i=0;i<detectedEnemies.size();i++) //for each enemy type, we store them in the Hashmap
       {
         if(detectedEnemies.get(i).breed == HARVESTER)
         {
@@ -278,27 +328,29 @@ void go() {
           enemyMap.put(4,locInt);
         }
       }
+      //now, we access the first min value found in the hashmap :
+      if(enemyMap.get(1).size()!=0)
+      {
+        return detectedEnemies.get(enemyMap.get(1).get(0));
+      }
+      else if(enemyMap.get(2).size()!=0)
+      {
+         return detectedEnemies.get(enemyMap.get(2).get(0));     
+      }
+      else if(enemyMap.get(3).size()!=0)
+      {
+         return detectedEnemies.get(enemyMap.get(3).get(0));     
+      }
+      else if(enemyMap.get(4).size()!=0)
+      {
+         return detectedEnemies.get(enemyMap.get(4).get(0));     
+      }
+      else
+      {
+        return null;
+      }
     }
-    //now, we access the first min value found in the hashmap :
-    if(enemyMap.get(1).size()!=0)
-    {
-      return detectedEnemies.get(enemyMap.get(1).get(0));
-    }
-    else if(enemyMap.get(2).size()!=0)
-    {
-       return detectedEnemies.get(enemyMap.get(2).get(0));     
-    }
-    else if(enemyMap.get(3).size()!=0)
-    {
-       return detectedEnemies.get(enemyMap.get(3).get(0));     
-    }
-    else if(enemyMap.get(4).size()!=0)
-    {
-       return detectedEnemies.get(enemyMap.get(4).get(0));     
-    }
-    else{
-      return null;
-    }
+    return null;
   }
 
   //
@@ -310,29 +362,31 @@ void go() {
   {
     if(target!=null)
     {
-      ArrayList<RocketLauncher> rockets = (ArrayList<RocketLauncher>)perceiveRobots(friend,LAUNCHER); //RIGHT NOW, we assume that all rockets in vicinity are part of the team -> should include a way to either directly communicate, or see if they are indeed part of the team
+      ArrayList<RocketLauncher> rockets = (ArrayList<RocketLauncher>)perceiveRobots(friend,LAUNCHER); //we detect all the present friendly rocket launchers
       if(rockets!=null){
         for(int i=0;i<rockets.size();i++)
         {
-          System.out.println("Explorer : sending msg to rocket "+rockets.get(i));
-          informAboutTarget(rockets.get(i),target);
-          //rockets.get(i).brain[2].z=1;
+          if(rockets.get(i).who == acquaintances[3] || rockets.get(i).who == acquaintances[4]) //if the detected rocket is part of the team, send a message
+          {
+            informAboutTarget(rockets.get(i),target);
+          }
         }
       }
     }
     else //if no target found, we tell the rockets that they have no target
     {
-      ArrayList<RocketLauncher> rockets = (ArrayList<RocketLauncher>)perceiveRobots(friend,LAUNCHER); //RIGHT NOW, we assume that all rockets in vicinity are part of the team -> should include a way to either directly communicate, or see if they are indeed part of the team
+      ArrayList<RocketLauncher> rockets = (ArrayList<RocketLauncher>)perceiveRobots(friend,LAUNCHER); //we detect all the present friendly rocket launchers
       if(rockets!=null)
       {
         for(int i=0;i<rockets.size();i++)
         {
-          //informAboutTarget(rockets.get(i),null);
-          rockets.get(i).brain[4].y=0;
+          if(rockets.get(i).who == acquaintances[3] || rockets.get(i).who == acquaintances[4]) //if the detected rocket is part of the team, tell them that they have no target
+          {
+            rockets.get(i).brain[4].y=0;
+          }
         }
       }
     }
-    
   }
 
   //
@@ -467,6 +521,65 @@ void go() {
     if (freeAhead(speed))
       forward(speed);
   }
+  
+  //
+  // handleMessages
+  // ==============
+  // > handle messages received
+  // > identify the closest localized burger
+  //
+  void handleMessages() {
+    Message msg;
+    // for all messages
+    for (int i=0; i<messages.size(); i++) {
+      // get next message
+      msg = messages.get(i);
+      // if "leader position update" message
+      if (msg.type == 11 && msg.args[1]==colour) //tests if the message received is a position update demand from a rocket 
+      {
+        //System.out.println("Explorer : position update demand received");
+        float[] arg = new float[3];
+        arg[0]=pos.x;
+        arg[1]=pos.y;
+        arg[2]=colour;
+        //System.out.println("Explorer : sending position update");
+        sendMessage((int)msg.args[0],10,arg); //sending msg to rocket
+      }
+      else if(msg.type == 12 && msg.args[1]==colour) //tests if the message received is a link-up demand
+      {
+        System.out.println("Explorer "+who+": link-up demand received");
+        speed = launcherSpeed;
+        brain[1].z = 1; //indicates that the explorer is part of the coalition formed by (this) rocket
+        brain[1].x++;
+        //we store in acquaintances 3 and 4 the id of the rockets of the coalition
+        if(acquaintances[3]<0) 
+        {
+          acquaintances[3]=(int)msg.args[0];
+        }
+        else if(acquaintances[4]<0)
+        {
+          acquaintances[4]=(int)msg.args[0];
+        }
+      }
+      else if(msg.type==15 && msg.args[1]==colour) //if the explorer receives a "disengage" message from one of its rocket launchers, it will remove it from its memory
+      {
+        System.out.println("Explorer "+who+" : disengage message received");
+        //we store in acquaintances 3 and 4 the id of the rockets of the coalition
+        if(acquaintances[3]==msg.args[0]) 
+        {
+          acquaintances[3]=-1;
+          brain[1].x--;
+        }
+        else if(acquaintances[4]==msg.args[0])
+        {
+          acquaintances[4]=-1;
+          brain[1].x--;
+        }
+      }
+    }
+    // clear the message queue
+    flushMessages();
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -494,6 +607,9 @@ class RedHarvester extends Harvester {
   // > called at the creation of the agent
   //
   void setup() {
+    Base base = (Base)minDist(myBases);
+    brain[4].x = base.pos.x;
+    brain[4].y = base.pos.y;
   }
 
   //
@@ -505,38 +621,58 @@ class RedHarvester extends Harvester {
   void go() {
     // handle messages received
     handleMessages();
-
+    if(energy<50){
+        Base bob = (Base)minDist(myBases);
+        if (bob != null) 
+            bob.brain[5].x+=1;      
+    }
+    
     // check for the closest burger
     Burger b = (Burger)minDist(perceiveBurgers());
     if ((b != null) && (distance(b) <= 2))
       // if one is found next to the robot, collect it
       takeFood(b);
-
-    // if food to deposit or too few energy
-    if ((carryingFood > 200) || (energy < 100))
-      // time to go back to the base
-      brain[4].x = 1;
-
-    // if in "go back" state
-    if (brain[4].x == 1) {
-      // go back to the base
-      goBackToBase();
-
-      // if enough energy and food
-      if ((energy > 100) && (carryingFood > 100)) {
-        // check for closest base
-        Base bob = (Base)minDist(myBases);
-        if (bob != null) {
-          // if there is one and the harvester is in the sphere of perception of the base
-          if (distance(bob) < basePerception)
-            // plant one burger as a seed to produce new ones
-            plantSeed();
-        }
+    
+    if (brain[1].z == 0) {
+      // Harvester is out of the coalition
+      
+      Base base = (Base)minDist(myBases);
+      if (base != null) {
+      // if there is one
+      if (distance(base) > basePerception + harvesterPerception) {
+        brain[4].x = 1;
       }
-    } else
-      // if not in the "go back" state, explore and collect food
-      goAndEat();
-  }
+        
+        // if food to deposit or too few energy
+      if ((carryingFood > 200) || (energy < 100))
+        // time to go back to the base
+        brain[4].x = 1;
+  
+      // if in "go back" state
+      if (brain[4].x == 1) {
+        // go back to the base
+        goBackToBase();
+  
+        // if enough energy and food
+        if ((energy > 100) && (carryingFood > 100)) {
+          // check for closest base
+          Base bob = (Base)minDist(myBases);
+          if (bob != null) {
+            // if there is one and the harvester is in the sphere of perception of the base
+            if (distance(bob) < basePerception)
+              // plant one burger as a seed to produce new ones
+              plantSeed();
+          }
+        }
+      } else
+        // if not in the "go back" state, explore and collect food
+        goAndEat();
+      }
+    } else if (brain[1].z == 1) {
+      // Harvester is in a the coalition
+      
+    }
+}
 
   //
   // goBackToBase
@@ -683,6 +819,7 @@ class RedHarvester extends Harvester {
 //   0.z = breed of the target
 //   1.z = if in squad (0 if no, 1 if yes)
 //   1.x / 1.y = position of leader
+//   2.x = if leader is alive (0 if no, 1 if yes)
 //   4.x = (0 = look for target | 1 = go back to base) 
 //   4.y = (0 = no target | 1 = localized target)
 //   5.x / 5.y = position of the base that created it
@@ -711,19 +848,35 @@ class RedRocketLauncher extends RocketLauncher {
   // > defines the behavior of the agent
   //
   void go() {
+    
+    
+    if(energy<50){
+        Base bob = (Base)minDist(myBases);
+        if (bob != null) 
+            bob.brain[5].y+=1;      
+    }
     // if no energy or no bullets
     if ((energy < 100) || (bullets == 0))
       // go back to the base
       brain[4].x = 1;
-
-    if (brain[4].x == 1) 
+    
+    if(brain[1].z==1) //SQUAD BEHAVIOR
     {
-      // if in "go back to base" mode
-      goBackToBase();
-    } 
-    else if(brain[1].z==1) //SQUAD BEHAVIOR
-    {
-      FindExplorer();
+      if(energy<100) //if the rocket is lacking energy and will soon die, it disengages from the explorer
+      {
+        System.out.println("Rocket "+who+" : disengaging");
+        float[] arg = new float[2];
+        arg[0]=who;
+        arg[1]=colour;
+        sendMessage(acquaintances[1], 15, arg);
+        //we clean up the rocket's memory :
+        acquaintances[1]=-1;
+        brain[1].x = 0;
+        brain[1].y = 0;
+        brain[1].z = 0;
+        return;
+      }
+      UpdateExplorer(); //updates position with explorer's
       // handle messages received
       handleMessages();
       if(brain[4].y==1) //if a target's been found by the leader, the rocket attacks it
@@ -741,32 +894,39 @@ class RedRocketLauncher extends RocketLauncher {
           launchBullet(towards(brain[0]));
         }
       }
-    } 
+    }
     else //STANDARD ALONE BEHAVIOR
     {
-      // try to find a suitable coalition leader :
-      Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
-      if(explorer!=null) //right now, we only test if explorer exists, not wether or not it's in squad
+      if(FindExplorer())//when alone, a rocket will try to find an explorer to link to
       {
-        brain[1].x = explorer.pos.x;
-        brain[1].y = explorer.pos.y;
-        brain[1].z = 1;
-        return;
+        return; //if a leader's been found, we avoid doing the standard alone behavior
       }
-      // try to find a target
-      selectTarget();
-      // if target identified
-      if (target())
+      
+      Base base = (Base)minDist(myBases);
+      if (distance(base) > basePerception + explorerPerception) {
+        // if too far from base go back to it and defend it
+        brain[4].x = 1;
+      } else {
+        // try to find a target
+        selectTarget();
+        // if target identified
+        if (target())
+        {
+          // shoot on the target
+          launchBullet(towards(brain[0]));
+        }
+        else
+        {
+          // else explore randomly
+          randomMove(45);
+        }
+      }      
+      
+      if (brain[4].x == 1) 
       {
-        // shoot on the target
-        launchBullet(towards(brain[0]));
-      }
-      else
-      {
-        // else explore randomly
-        randomMove(45);
-      }
-        
+        // if in "go back to base" mode
+        goBackToBase();
+      } 
     }
   }
 
@@ -877,18 +1037,42 @@ class RedRocketLauncher extends RocketLauncher {
   //
   //  FindExplorer
   //  ============
-  //  > try to find suitable leader
+  //  > try to find suitable leader (returns true if leader found)
   //
-  void FindExplorer(){
-    Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
-      if(explorer!=null) //right now, we only test if explorer exists, not wether or not it's in squad
+  boolean FindExplorer()
+  {
+    // try to find a suitable coalition leader :
+      Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
+      if(explorer!=null && explorer.brain[1].x<2 && explorer.brain[4].z!=1) //right now, we only test if explorer exists && has less than 2 ppl in squad && is not in other coalition
       {
+        System.out.println("Rocket "+who+" : sending link message request to explorer "+explorer.who);
+        float[] arg = new float[2];
+        arg[0]=who;
+        arg[1]=colour;
+        acquaintances[1]=explorer.who; //we save in the acquaintances the id of the explorer
         brain[1].x = explorer.pos.x;
         brain[1].y = explorer.pos.y;
         brain[1].z = 1;
-        explorer.speed = launcherSpeed;
-        explorer.brain[1].z = 1;
+        sendMessage(explorer.who, 12, arg); //send a link-up request message is sent to the explorer
+        return true;
       }
+      return false;
+  }
+  
+  //
+  //  UpdateExplorer
+  //  ============
+  //  > calls for leader's position update
+  //
+  void UpdateExplorer(){
+    //MESSAGE VERSION :
+    if(acquaintances[1]>0) //if the rocket has a team leader (explorer) we demand its position
+    {
+      float[] arg = new float[2];
+      arg[0]=who;
+      arg[1]=colour;
+      sendMessage(acquaintances[1],11,arg); //request position update
+    }
   }
   
   //
@@ -904,8 +1088,9 @@ class RedRocketLauncher extends RocketLauncher {
       // get next message
       msg = messages.get(i);
       // if "localized target" message
-      if (msg.type == INFORM_ABOUT_TARGET) {
-        System.out.println("Rocket Launcher : Target information received");
+      if (msg.type == INFORM_ABOUT_TARGET) 
+      {
+        //System.out.println("Rocket Launcher : Target information received");
         // record the position of the target
         brain[0].x = msg.args[0];
         brain[0].y = msg.args[1];
@@ -914,6 +1099,17 @@ class RedRocketLauncher extends RocketLauncher {
         brain[4].y=1;
         //change heading to target :
         heading = towards(brain[0]);
+      }
+      else if(msg.type == 10 && msg.args[2]==colour) //réception message d'update de position du leader
+      {
+        brain[1].x = msg.args[0];
+        brain[1].y = msg.args[1];
+      }
+      else if(msg.type==13 && msg.args[1]==colour) //reception of dissolution message
+      {
+        System.out.println("Rocket "+who+" : received dissolution message from Explorer "+msg.args[0]);
+        brain[1].z=0;
+        acquaintances[1]=-1;
       }
     }
     // clear the message queue

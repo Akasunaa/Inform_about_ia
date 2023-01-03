@@ -5,37 +5,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////
 
-
-//------CUSTOM MESSAGE FOR THE RED TEAM ARE DEFINED HERE----------//
-  
-  final int ASK_FOR_JOINING_COALITION = 1000;
-  // message used to invite someone to a coalition. It goes hand in hand with multiples arguments. 
-  // arg[0] : type of coalition 
-  // arg[1] : role offered for this coalition 
-  
-  final int RESPOND_TO_COALITION_OFFER = 1001;
-  //message used in order to accept or decline a coalition offer. 
-  // args[0] : 0 = Refusal | 1 = Compliance
-  
-  final int CONFIRM_COALITION_FORMATION =  1002; 
-  //message used in order to confirm the creation of the coalition. 
-  // arg[0] : type of coalition 
-  // arg[1] : role in this coalition, depending on the type of coalition 
-  
-  final int INFORM_ABOUT_DISSOLVING_COALITION = 1003;
-  // message used in order to dissolve a coalition. If the transmitter and the receiver belong to the same coalition, the coalition is canceled and the receiver transmit the message too. 
-  // no specific arguments
-  
-  final int HI_THERE = 1004;
-  //Message used in order to say hi to another unit. The main purpose of this is to regularly check if the members of a coalition is still alive and transmit its position to other
-  //arg[0] = x coordinate of the emitting unit 
-  //arg[1] = y coordinateof the emitting unit 
-
-//------END OF CUSTOM MESSAGE DEFINITION ----------//
-
-
 class RedTeam extends Team {
-  
+  final int MY_CUSTOM_MSG = 5;
   PVector base1, base2;
 
   // coordinates of the 2 bases, chosen in the rectangle with corners
@@ -75,7 +46,6 @@ class RedBase extends Base {
   }
   
   void chooseNewRobot(){
-
     // creates new robots depending on energy and the state of brain[5]
     if ((brain[5].x > 0) && (energy >= 1000 + harvesterCost)) {
       // 1st priority = creates harvesters 
@@ -94,8 +64,8 @@ class RedBase extends Base {
       }     
     } 
     else if(energy>5000){
-        ArrayList<Seed> seeds = perceiveSeeds(friend);
-        ArrayList<Robot> robots = perceiveRobots(friend, HARVESTER);
+        ArrayList seeds = perceiveSeeds(friend);
+        ArrayList robots = perceiveRobots(friend, HARVESTER);
         if(seeds!=null && robots!=null){
           if(seeds.size()>150 && robots.size()>4){ //lot of seed and harvester -> Rocket Launcher
               newRocketLauncher();
@@ -105,14 +75,16 @@ class RedBase extends Base {
           else if(seeds.size()<50){ //no seed -> Harvester 
               newHarvester();
               System.out.println("new harv");
-          }
+}
           else{ //is ok : explo
               newExplorer();
               System.out.println("new explo");
+
             }
         }  
         newHarvester();
         System.out.println("new harv");
+
     }
    
 
@@ -138,7 +110,7 @@ class RedBase extends Base {
     Robot bob = (Robot)minDist(perceiveRobots(ennemy));
     if (bob != null) {
       // call for help
-      //System.out.println("Base " + who + " is calling for help at " + pos.x + ", " + pos.y); 
+      // System.out.println("Base " + who + " is calling for help at " + pos.x + ", " + pos.y); 
       float[] args = new float[2];
       args[0] = who;
       args[1] = colour;
@@ -182,13 +154,12 @@ class RedBase extends Base {
         }
       } else if (msg.type == 141 && msg.args[1] == colour) {
         // if the explorer is in an attack coalition send message to order defense
-          if (msg.args[0] == 1) { // that means brain[1].z == 1 for the explorer
+          if (msg.args[0] == 1) {
             float[] arg = new float[3];
             arg[0] = pos.x;  // position of the sender
             arg[1] = pos.y;  // position of the sender
             arg[2] = colour;  // colour of the sender
-            sendMessage(msg.alice, 14, arg); // base sends a message to ask the coalition to come help
-            
+            sendMessage(msg.alice, 14, arg);
           }
       }
     }
@@ -205,20 +176,10 @@ class RedBase extends Base {
 // map of the brain:
 //   4.x = (0 = exploration | 1 = go back to base)
 //   4.y = (0 = no target | 1 = locked target)
-//   4.z = (0 = basic explorer | 1 = chief of attack coalition | 2 = chief of convey coalition)
 //   0.x / 0.y = coordinates of the target
 //   0.z = type of the target
-//
-//   1.x [if chief of attack coalition] = number of rockets in the coalition (2 max)
-//   1.x / 1.y [if chief of convey coalition] = coordinate of the nomad havester search point 
-//   1.z = type of coalition (0 = None | 1 = Attack Coalition | 2 = Convey coalition)
-//   2.x / 2.y [if chief of a convey coalition] = last coordinate of the sedentary harvester  
-//   2.z =  waiting for coalition to complete (0 = no proposal; 1 = First only say yes; 2 = second only say yes ; 3 = both accepted) 
-//
-//map of the aquaintances:
-//   • if the explorer is a chief of convey coalition
-//     0 = id of the sedentary harvester
-//     1 = id of the nomad harvester 
+//   1.x = number of rockets in the coalition (2 max)
+//   1.z = if in a coalition
 ///////////////////////////////////////////////////////////////////////////
 class RedExplorer extends Explorer {
   //
@@ -227,9 +188,6 @@ class RedExplorer extends Explorer {
   //
   RedExplorer(PVector pos, color c, ArrayList b, Team t) {
     super(pos, c, b, t);
-    // 33% of chance to create an explorer of one those types : basic, convey, attack 
-    brain[4].z = int(random(3));
-    System.out.println("Explorer of type " + brain[4].z + " is born");
   }
 
   //
@@ -248,16 +206,14 @@ class RedExplorer extends Explorer {
   // > defines the behavior of the agent
   //
 void go() {
-    
-    handleMessages();
-   
+  handleMessages();
     // if food to deposit or too few energy
-    if (( (carryingFood > 200) && brain[1].z != 2 ) || (energy < 100))
+    if ((carryingFood > 200) || (energy < 100))
       // time to go back to base
       brain[4].x = 1;
 
     // depending on the state of the robot
-    if(brain[1].z == 1) //ATTACK COALITION BEHAVIOR
+    if(brain[1].z==1) //COALITION BEHAVIOR
     {
       //In coalition, the explorer will attempt to locate enemies, by classing them in priority, and then transmit that target to the team's rocket launchers
       LocateEnemy();
@@ -271,14 +227,14 @@ void go() {
         arg[1]=colour;
         if(acquaintances[3]>=0)
         { 
-          //System.out.println("Explorer "+who+" : sending dissolve coalition message to rocket "+acquaintances[3]);
+          System.out.println("Explorer "+who+" : sending dissolve coalition message to rocket "+acquaintances[3]);
           sendMessage(acquaintances[3], 13, arg);
           acquaintances[3]=-1;
           brain[1].x--;  
         }
         if(acquaintances[4]>=0)
         {
-          //System.out.println("Explorer "+who+" : sending dissolve coalition message to rocket "+acquaintances[4]);
+          System.out.println("Explorer "+who+" : sending dissolve coalition message to rocket "+acquaintances[4]);
           sendMessage(acquaintances[4], 13, arg);
           acquaintances[4]=-1;
           brain[1].x--;
@@ -303,92 +259,12 @@ void go() {
         }
       }
     }
-    
-    else if(brain[1].z == 2) //CONVEY COALITION BEHAVIOR
-    {
-      checkUponHarvesters();
-      
-      if(carryingFood < 100){
-        joinNomadHarvester();
-      } else {
-        joinSedentaryHarvester();
-      }
-    } 
-    
-    else if ( brain[1].z == 0 && brain[4].z == 2){ //THE EXPLORER TYPE IS CONVEY CHIEF AND NOT IN A COALITION NOW
-      //stay near the base and doing job offer to harvester 
-      Base base = (Base)minDist(myBases);
-      float dist = distance(base);
-      
-      if(dist > explorerPerception / 2){
-        goBackToBase();//while not in colation, stay near the base 
-      } 
-      
-      else {
-        
-        if( brain[2].z == 3){
-        //confirm coalition to both aquaintances and transmit confirm message 
-        explorerConfirmCoalitionFormation(acquaintances[0], 2, 1); //send confirmation message to sendentary havester. It will reply and transmit his position.
-        explorerConfirmCoalitionFormation(acquaintances[1], 2, 2); //same for nomad harvester 
-        brain[2].z = 0; //recruitement is finished ! 
-        brain[1].z = 2; //explorer belong to convey coalition now
-        explorerSayHi(acquaintances[0]); //say hi to sedentary haverster. 
-        explorerSayHi(acquaintances[1]); //say hi to nomad haverster. 
-        } 
-        
-        else {
-          Harvester harv1 = (Harvester)oneOf(perceiveRobots(friend, HARVESTER));
-          Harvester harv2 = (Harvester)oneOf(perceiveRobots(friend, HARVESTER));
-          
-          if(brain[2].z == 0){
-          //make proposition for both roles
-          if(harv1 != null){
-            explorerAskForJoiningCoalition(harv1, 2, 1); // job offer as sendentary havester
-            acquaintances[0] = harv1.who; // we temporarly register th id of th harvester in order to wait for his answer. 
-          }
-          if(harv1 != null && harv2 != null && harv1.who != harv2.who){
-            explorerAskForJoiningCoalition(harv2, 2, 2);
-            acquaintances[1] = harv2.who; 
-            }
-          }
-          else if(brain[2].z == 1){
-            //make a prosition for second role if someone already accepted for the first one 
-            if(harv1 != null && harv1.who != acquaintances[0]){ // checking that the new is not the one who accepted the other job
-              explorerAskForJoiningCoalition(harv1, 2, 2); // we propose to the first havester to join the coalition as nomad harvester
-              acquaintances[1] = harv1.who; 
-            } else if (harv2 != null && harv2.who != acquaintances[0]){
-              explorerAskForJoiningCoalition(harv2, 2, 2); // we propose to the second havester to join the coalition as nomad harvester
-              acquaintances[1] = harv2.who;
-            }
-          }
-          else if(brain[2].z == 2){
-          // make a proposition for first role if someone already accepted the second
-          if(harv1 != null && harv1.who != acquaintances[1]){ 
-              explorerAskForJoiningCoalition(harv1, 2, 1); // we propose to the first havester to join the coalition as nomad harvester
-              acquaintances[0] = harv1.who; 
-            } else if (harv2 != null && harv2.who != acquaintances[1]){
-              explorerAskForJoiningCoalition(harv2, 2, 1); // we propose to the second havester to join the coalition as nomad harvester
-              acquaintances[0] = harv2.who;
-            }
-          }  
-        }
-      }
-      
-    }
-    
     else //STANDALONE BEHAVIOR
     {
-      
-      ArrayList<Seed> seeds = perceiveSeeds(ennemy);
       if (brain[4].x == 1) {
         // go back to base...
         goBackToBase();
-      }
-      else if(seeds!=null){//Pietinement
-        heading = towards(seeds.get(0))+random(-radians(20), radians(20));
-        tryToMoveForward();
-      }
-      else {
+      } else {
         // ...or explore randomly
         randomMove(45);
       }
@@ -535,53 +411,6 @@ void go() {
       }
     }
   }
-  
-  //
-  // joinNomadHarvester
-  // ============
-  // > go found the nomad havester of the coalition until the explorer get enough food !
-  //
-  void joinNomadHarvester(){
-      heading = towards(brain[1]); 
-      tryToMoveForward();
-  }
-  
-  //
-  // joinSedentaryHarvester
-  // ============
-  // > go found the sedentary havester of the coalition until the explorer get close enough to give it previously collected food
-  //
-  void joinSedentaryHarvester(){ 
-      heading = towards(brain[2]); 
-      tryToMoveForward();
-      
-      //check id the sedentary is perceived and close enough
-        ArrayList<Harvester> harvesters = (ArrayList<Harvester>)perceiveRobots(friend,HARVESTER); //check harvesters around.
-        if(harvesters!=null){
-          for(int i=0;i<harvesters.size();i++)
-          {
-            Harvester harvest = harvesters.get(i);
-            if(harvest.who == acquaintances[0]){ //if we found the sedentary harvest, update its position 
-              brain[2].x = harvest.pos.x;
-              brain[2].y = harvest.pos.y;
-              if(distance(harvest) <=2){
-                giveFood(harvest, carryingFood); //and if close enough, give food; 
-              }
-              break;
-            }
-          }
-        }
-  }
-  
-  //
-  // checkUponHarvesters
-  // ============
-  // > send Hello to other coalition Harvesters, in order to reset their coalition expiration timer and get a response to update their position in brain
-  //
-  void checkUponHarvesters(){
-    explorerSayHi(acquaintances[0]);
-    explorerSayHi(acquaintances[1]);
-  }
 
   //
   // setTarget
@@ -716,235 +545,91 @@ void go() {
       forward(speed);
   }
   
-  void quitCoalition(){
-    brain[1].z = 0;
-    brain[2].z = 0; // reset coalition proporsal if not done yet 
-    for(int i = 0; i<acquaintances.length ; i++){ //reset acquaintances and inform them about dissolving
-      explorerDissolveCoalition(acquaintances[i]);
-      acquaintances[i] = -1;
-    }
-  }
-  
   //
   // handleMessages
   // ==============
   // > handle messages received
+  // > identify the closest localized burger
   //
   void handleMessages() {
-    PVector p = new PVector();
     Message msg;
     // for all messages
     for (int i=0; i<messages.size(); i++) {
       // get next message
       msg = messages.get(i);
-      
-      if(msg.type == RESPOND_TO_COALITION_OFFER){
-          p.x = msg.args[0]; //response to the  offer ...
-          
-          if(p.x == 1){
-            
-            if(msg.alice == acquaintances[0]){ //.. from the potential sedentary 
-              
-              if(brain[2].z == 0){
-                brain[2].z = 1; // the sedentary havester is the first to accept
-              } else if (brain[2].z == 2){
-                brain[2].z = 3; //the sedentary haverster is the second to accept
-              }
-              
-            } else if (msg.alice == acquaintances[1]){ //... from the potentiel nomad
-              
-              if(brain[2].z == 0){
-                brain[2].z = 2; // the nomad havester is the first to accept
-              } else if (brain[2].z == 1){
-                brain[2].z = 3; //the nomad haverster is the second to accept
-              }
-            
-            }
-            
-          }
-            
-        }
-      
-      if(msg.type == HI_THERE){
-          p.x = msg.args[0]; //x coordinate of alice
-          p.y = msg.args[1]; //y coordinate of alice 
-          if(brain[4].z == 2){
-            if(msg.alice == acquaintances[0]){ // if the one to say HI is the sedentary harvester :  
-              //update sedentary position : 
-              brain[2].x = p.x;
-              brain[2].y = p.y;
-              } 
-            if(msg.alice == acquaintances[1]){ // if the one to say HI is the nomad haverster
-              //update nomad position : 
-              brain[1].x = p.x;
-              brain[1].y = p.y;
-            }
-          }
-            
-        }
-        
-        if(msg.type == INFORM_ABOUT_DISSOLVING_COALITION){
-          quitCoalition();
-        }
-      
-      
-      if(brain[4].z != 2){ //the following messages do not concern the explorer of type "chief of convey coalition"
-        // if "leader position update" message
-        if (msg.type == 11 && msg.args[1]==colour) //tests if the message received is a position update demand from a rocket 
+      // if "leader position update" message
+      if (msg.type == 11 && msg.args[1]==colour) //tests if the message received is a position update demand from a rocket 
+      {
+        //System.out.println("Explorer : position update demand received");
+        float[] arg = new float[3];
+        arg[0]=pos.x;
+        arg[1]=pos.y;
+        arg[2]=colour;
+        //System.out.println("Explorer : sending position update");
+        sendMessage((int)msg.args[0],10,arg); //sending msg to rocket
+      }
+      else if(msg.type == 12 && msg.args[1]==colour) //tests if the message received is a link-up demand
+      {
+        System.out.println("Explorer "+who+": link-up demand received");
+        speed = launcherSpeed;
+        brain[1].z = 1; //indicates that the explorer is part of the coalition formed by (this) rocket
+        brain[1].x++;
+        //we store in acquaintances 3 and 4 the id of the rockets of the coalition
+        if(acquaintances[3]<0) 
         {
-          //System.out.println("Explorer : position update demand received");
-          float[] arg = new float[3];
-          arg[0]=pos.x;
-          arg[1]=pos.y;
-          arg[2]=colour;
-          //System.out.println("Explorer : sending position update");
-          sendMessage((int)msg.args[0],10,arg); //sending msg to rocket
+          acquaintances[3]=(int)msg.args[0];
         }
-        else if (msg.type == 12 && msg.args[1]==colour) //tests if the message received is a link-up demand
+        else if(acquaintances[4]<0)
         {
-          //System.out.println("Explorer "+who+": link-up demand received");
-          speed = launcherSpeed;
-          brain[1].z = 1; //indicates that the explorer is part of the coalition formed by (this) rocket
-          brain[1].x++;
-          //we store in acquaintances 3 and 4 the id of the rockets of the coalition
-          if(acquaintances[3]<0) 
-          {
-            acquaintances[3]=(int)msg.args[0];
-          }
-          else if(acquaintances[4]<0)
-          {
-            acquaintances[4]=(int)msg.args[0];
-          }
+          acquaintances[4]=(int)msg.args[0];
         }
-        
-        else if (msg.type == 14 && msg.args[2] == colour)  //tests if the message received is a call for help
+      }
+      else if (msg.type == 14 && msg.args[2] == colour)  //tests if the message received is a call for help
+      {
+         // System.out.println("Explorer : Received call for help from " + msg.alice + " at " + msg.args[0] + ", " + msg.args[1]);
+         brain[4].y = 1;
+         brain[0].x = msg.args[0];
+         brain[0].y = msg.args[1];
+      }
+      else if(msg.type == 15 && msg.args[1] == colour) //if the explorer receives a "disengage" message from one of its rocket launchers, it will remove it from its memory
+      {
+        System.out.println("Explorer "+who+" : disengage message received");
+        //we store in acquaintances 3 and 4 the id of the rockets of the coalition
+        if(acquaintances[3]==msg.args[0]) 
         {
-           System.out.println("Explorer : Received call for help from " + msg.alice + " at " + msg.args[0] + ", " + msg.args[1]);
-           brain[4].y = 1;
-           brain[0].x = msg.args[0];
-           brain[0].y = msg.args[1];
+          acquaintances[3]=-1;
+          brain[1].x--;
         }
-        
-        else if(msg.type == 15 && msg.args[1] == colour) //if the explorer receives a "disengage" message from one of its rocket launchers, it will remove it from its memory
+        else if(acquaintances[4]==msg.args[0])
         {
-          //System.out.println("Explorer "+who+" : disengage message received");
-          //we store in acquaintances 3 and 4 the id of the rockets of the coalition
-          if(acquaintances[3]==msg.args[0]) 
-          {
-            acquaintances[3]=-1;
-            brain[1].x--;
-          }
-          else if(acquaintances[4]==msg.args[0])
-          {
-            acquaintances[4]=-1;
-            brain[1].x--;
-          }
+          acquaintances[4]=-1;
+          brain[1].x--;
         }
-        
-        else if(msg.type == 180 && msg.args[1]==colour) //if the explorer receives a "request coalition informations" message from one rocket that requests the informations from the explorer
-        {
-          System.out.println("Explorer "+who+" : receiving request for coalition informations");
-          float[] arg = new float[6];
-          arg[0]=who;
-          arg[1]=brain[1].x;
-          arg[2]=brain[4].z;
-          arg[3]=pos.x;
-          arg[4]=pos.y;
-          arg[5]=colour;
-          sendMessage((int)msg.args[0], 181, arg); //sends the requested informations to the rocket
-        }
-        else if (msg.type == 140 && msg.args[1]==colour) //if the explorer receives a "request coalition type" message from a robot
-        {
-          System.out.println("Explorer "+who+" : receiving request for coalition informations");
-          float[] arg = new float[2];
-          arg[0]=brain[1].z; // coalition state
-          arg[1]=colour; // colour of the sender
-          sendMessage((int)msg.args[0], 141, arg); // returns the message with the information of type of the coalition
-        }
+      }
+      else if(msg.type == 180 && msg.args[1]==colour) //if the explorer receives a "request coalition informations" message from one rocket that requests the informations from the explorer
+      {
+        System.out.println("Explorer "+who+" : receiving request for coalition informations");
+        float[] arg = new float[6];
+        arg[0]=who;
+        arg[1]=brain[1].x;
+        arg[2]=brain[4].z;
+        arg[3]=pos.x;
+        arg[4]=pos.y;
+        arg[5]=colour;
+        sendMessage((int)msg.args[0], 181, arg); //sends the requested informations to the rocket
+      }
+      else if (msg.type == 140 && msg.args[1]==colour) //if the explorer receives a "request coalition type" message from a robot
+      {
+        System.out.println("Explorer "+who+" : receiving request for coalition informations");
+        float[] arg = new float[2];
+        arg[0]=brain[1].z; // coalition state
+        arg[1]=colour; // colour of the sender
+        sendMessage((int)msg.args[0], 141, arg);
       }
     }
     // clear the message queue
     flushMessages();
   }
-  
-  // ---------- COMMUNICATION SPECIFIC FUNCTIONS FOR RED_EXPLORER ------------//
-  
-  //Message used in order to suggest the creation of a new coalition to other robots, with this explorer as chief.
-  void explorerAskForJoiningCoalition(Robot bob, int coalitionType, int role){
-    // check that bob exists and distance is less than max range
-    if ((bob != null) && (distance(bob) < messageRange)) {
-      // build the message...
-      float[] args = new float[2];
-      args[0] = coalitionType;
-      args[1] = role ;  
-      sendMessage(bob.who, ASK_FOR_JOINING_COALITION, args);
-    }
-  }
-  
-  void explorerAskForJoiningCoalition(int id, int coalitionType, int role){
-      // build the message...
-      float[] args = new float[2];
-      args[0] = coalitionType;
-      args[1] = role ;  
-      sendMessage(id, ASK_FOR_JOINING_COALITION, args);
-  }
-  
-  //Message used in order to confirm the creation of the coalition to other members.
-  void explorerConfirmCoalitionFormation(Robot bob, int coalitionType, int finalRole){
-    // check that bob exists and distance is less than max range
-    if ((bob != null) && (distance(bob) < messageRange)) {
-      // build the message...
-      float[] args = new float[2];
-      args[0] = coalitionType;
-      args[1] = finalRole;  
-      sendMessage(bob.who, CONFIRM_COALITION_FORMATION, args);
-    }
-  }
-  
-  void explorerConfirmCoalitionFormation(int id, int coalitionType, int finalRole){
-      // build the message...
-      float[] args = new float[2];
-      args[0] = coalitionType;
-      args[1] = finalRole;  
-      sendMessage(id, CONFIRM_COALITION_FORMATION, args);
-  }
-  
-  //Message used in order to inform other members about the end of the coalition .
-  void explorerDissolveCoalition(Robot bob){
-    // check that bob exists and distance is less than max range
-    if ((bob != null) && (distance(bob) < messageRange)) {
-      // build the message...
-      float[] args = new float[0]; 
-      sendMessage(bob.who, INFORM_ABOUT_DISSOLVING_COALITION, args);
-    }
-  }
-  
-   void explorerDissolveCoalition(int id){
-      // build the message...
-      float[] args = new float[0]; 
-      sendMessage(id, INFORM_ABOUT_DISSOLVING_COALITION, args);
-  }
-  
-  void explorerSayHi(Robot bob){
-    // check that bob exists and distance is less than max range
-    if ((bob != null) && (distance(bob) < messageRange)) {
-      // build the message...
-      float[] args = new float[2]; 
-      args[0] = pos.x;
-      args[1] = pos.y; 
-      sendMessage(bob.who, HI_THERE, args);
-    }
-  }
-  
-  void explorerSayHi(int id){
-      // build the message...
-      float[] args = new float[2]; 
-      args[0] = pos.x;
-      args[1] = pos.y; 
-      sendMessage(id, HI_THERE, args);
-  }
-   // ---------- END COMMUNICATION SPECIFIC FUNCTIONS FOR RED_EXPLORER ------------//
-  
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -955,13 +640,7 @@ void go() {
 // map of the brain:
 //   4.x = (0 = look for food | 1 = go back to base) 
 //   4.y = (0 = no food found | 1 = food found)
-//   4.z = harvester type (0 = basic | 1 = sendentary | 2 = nomad)
-//   1.z = type of coalition (0 = None | 1 = convey coalition)
 //   0.x / 0.y = position of the localized food
-//
-// map of the aquaintances:
-//   • if the harvester belongs to a convey colaition 
-//     0 = id of the chief explorer
 ///////////////////////////////////////////////////////////////////////////
 class RedHarvester extends Harvester {
   //
@@ -993,11 +672,11 @@ class RedHarvester extends Harvester {
     // handle messages received
     handleMessages();
     
-    // COALITION OR STANDALONE : Call for help
-    Robot enemyLauncher = (Robot)minDist(perceiveRobots(ennemy, LAUNCHER));
+    Robot enemyLauncher = (Robot)minDist(perceiveRobots(ennemy));
     if (enemyLauncher != null) {
     // call for help
-      System.out.println("Harvester " + who + " is calling for help at " + pos.x + ", " + pos.y); 
+      // call for help
+      // System.out.println("Harvester " + who + " is calling for help at " + pos.x + ", " + pos.y); 
       float[] args = new float[2];
       args[0] = who;
       args[1] = colour;
@@ -1011,89 +690,52 @@ class RedHarvester extends Harvester {
       }
     }
     
-    //COALITION OR STANDALONE : Search for burger
+    // check for the closest burger
     Burger b = (Burger)minDist(perceiveBurgers());
     if ((b != null) && (distance(b) <= 2))
       // if one is found next to the robot, collect it
       takeFood(b);
-
-    // if food to deposit (when your not a nomad harvester) or too few energy
-    if (( brain[4].z != 2 && (carryingFood > 200)) || (energy < 100))
-      // time to go back to the base
-      brain[4].x = 1;
-
-    // if in "go back" state
-    if (brain[4].x == 1) {
-      // go back to the base
-      goBackToBase();
-
-      // if enough energy and food
-      if ((energy > 100) && (carryingFood > 100)) {
-        // check for closest base
-        Base bob = (Base)minDist(myBases);
-        if (bob != null) {
-          // if there is one and the harvester is in the sphere of perception of the base
-          if (distance(bob) < basePerception)
-            // plant one burger as a seed to produce new ones
-            plantSeed();
-        }
-      }
-    }
-    else if (brain[1].z == 1) { //CONVEY COALITION BEHAVIOR 
     
+    if (brain[1].z == 0) {
+      // Harvester is out of the coalition
+      
       Base base = (Base)minDist(myBases);
-      float dist = distance(base);
-    
-      if (brain[4].z == 1) { // sendentary behavior
-      
-        if(dist > basePerception){
-          brain[4].x = 1; //if the sedentary haverster got too far, it's going back to base
-        }
-        
+      if (base != null) {
+      // if there is one
+      if (distance(base) > basePerception + harvesterPerception) {
+        brain[4].x = 1;
       }
-      
-      
-      else if (brain[4].z == 2){ // nomad behavior 
-      
-        //check if the chief explorer (convey coalition) is close enough to give it food
-        ArrayList<Explorer> explorers = (ArrayList<Explorer>)perceiveRobots(friend,EXPLORER); //check the explorers around.
-        if(explorers!=null){
-          for(int i=0;i<explorers.size();i++)
-          {
-            Explorer explo = explorers.get(i);
-            if(explo.who == acquaintances[0]){ //if we founf the chief of the coalition
-              giveFood(explo, carryingFood);
-              harvesterSayHi(explo);
-              break;
-            }
+        
+        // if food to deposit or too few energy
+      if ((carryingFood > 200) || (energy < 100))
+        // time to go back to the base
+        brain[4].x = 1;
+  
+      // if in "go back" state
+      if (brain[4].x == 1) {
+        // go back to the base
+        goBackToBase();
+  
+        // if enough energy and food
+        if ((energy > 100) && (carryingFood > 100)) {
+          // check for closest base
+          Base bob = (Base)minDist(myBases);
+          if (bob != null) {
+            // if there is one and the harvester is in the sphere of perception of the base
+            if (distance(bob) < basePerception)
+              // plant one burger as a seed to produce new ones
+              plantSeed();
           }
         }
-        
-        
-        if(dist < basePerception * 2){ //if we are too close from the base, we go away;
-          heading = towards(base) + random(-radians(20), radians(20));
-          right(180);
-          tryToMoveForward();
-        } 
-        else { //if the harvester is far enough, explore as usual;
-          goAndEat();
-        }
-        
+      } else
+        // if not in the "go back" state, explore and collect food
+        goAndEat();
       }
+    } else if (brain[1].z == 1) {
+      // Harvester is in a the coalition
+      
     }
-    else { // BASIC BEHAVIOR
-    
-      /*Base base = (Base)minDist(myBases);
-          if (base != null) {
-            // if there is one
-            if (distance(base) > basePerception + harvesterPerception) {
-              brain[4].x = 1;
-            }
-          }*/
-      // if not in the "go back" state, explore and collect food
-      goAndEat();
-    }
-  }
+}
 
   //
   // goBackToBase
@@ -1192,7 +834,6 @@ class RedHarvester extends Harvester {
     if (freeAhead(speed))
       forward(speed);
   }
-  
 
   //
   // handleMessages
@@ -1209,7 +850,6 @@ class RedHarvester extends Harvester {
     for (int i=0; i<messages.size(); i++) {
       // get next message
       msg = messages.get(i);
-      
       // if "localized food" message
       if (msg.type == INFORM_ABOUT_FOOD) {
         // record the position of the burger
@@ -1232,121 +872,13 @@ class RedHarvester extends Harvester {
             arg[0] = pos.x;  // position of the sender
             arg[1] = pos.y;  // position of the sender
             arg[2] = colour;  // colour of the sender
-            sendMessage(msg.alice, 14, arg); // harvester sends a message to the attack coalition to ask them to come help 
+            sendMessage(msg.alice, 14, arg);
           }
       }
-      
-        if(msg.type == ASK_FOR_JOINING_COALITION){
-          p.x = msg.args[0]; //type of coalition 
-          p.y = msg.args[1]; //job offer 
-          if(brain[1].z == 0){ // if not in a coalition 
-            if(p.x == 2){ //proporsal of convey colaition
-              if((p.y == 2 && energy > harvesterNrj*3/4) // we accept nomad offer only if we do have at least 75%
-                  || (p.y == 1) ){ // we always accept sedentary offers 
-                harvesterRespondToCoalitionOffer(msg.alice, true);
-              } else { //if the offer doesn't correspon to anything known, decline. 
-                harvesterRespondToCoalitionOffer(msg.alice, false);
-              }
-              
-             }
-          }
-        }
-        
-        if(msg.type == CONFIRM_COALITION_FORMATION){
-          p.x = msg.args[0]; //type of coalition 
-          p.y = msg.args[1]; //final job attribution  
-          if(p.x == 2){ //convey coalition case 
-            brain[1].z = 1; // register the coalition 
-            brain[4].z = p.y; //register its new responsibilities (sendentary or nomad)
-            acquaintances[0] = msg.alice; //register the id of the chief explorer 
-            harvesterSayHi(acquaintances[0]); //say hi to chief in order to transmit initial position 
-            } 
-        }
-        
-        if(msg.type == HI_THERE){
-          p.x = msg.args[0]; //x coordinate of alice
-          p.y = msg.args[1]; //y coordinate of alice 
-          if(msg.alice == acquaintances[0]){ // if the one to say HI is the coalition chief : 
-            // TODO : reset coalition expiration timer 
-            harvesterSayHi(msg.alice); //say hi back to the chief. 
-            } 
-        }
-        
-        if(msg.type == INFORM_ABOUT_DISSOLVING_COALITION){
-          quitCoalition();
-        }
-        
-      }
-      
+    }
     // clear the message queue
     flushMessages();
   }
-  
-  void quitCoalition(){
-    brain[1].z = 0;
-    brain[4].z = 0;
-    for(int i = 0; i<acquaintances.length ; i++){
-      acquaintances[i] = -1;
-    }
-  }
-  
-   // ---------- COMMUNICATION SPECIFIC FUNCTIONS FOR RED_HARVESTER------------//
-  
-  //Message used in order to confirm or not the participation oh the harvester to the coalition.
-  void harvesterRespondToCoalitionOffer(Robot bob, boolean accepted){
-    // check that bob exists and distance is less than max range
-    if ((bob != null) && (distance(bob) < messageRange)) {
-      // build the message...
-      float[] args = new float[1];
-      args[0] = accepted ? 1 : 0; 
-      sendMessage(bob.who, RESPOND_TO_COALITION_OFFER, args);
-    }
-  }
-  
-  void harvesterRespondToCoalitionOffer(int id, boolean accepted){
-      // build the message...
-      float[] args = new float[1];
-      args[0] = accepted ? 1 : 0; 
-      sendMessage(id, RESPOND_TO_COALITION_OFFER, args);
-  }
-  
-  
-  //Message used in order to inform about the end of the coalition 
-  void harvesterDissolveCoalition(Robot bob){
-    // check that bob exists and distance is less than max range
-    if ((bob != null) && (distance(bob) < messageRange)) {
-      // build the message...
-      float[] args = new float[0]; 
-      sendMessage(bob.who, INFORM_ABOUT_DISSOLVING_COALITION, args);
-    }
-  }
-  
-   void harvesterDissolveCoalition(int id){
-      // build the message...
-      float[] args = new float[0]; 
-      sendMessage(id, INFORM_ABOUT_DISSOLVING_COALITION, args);
-  }
-  
-  void harvesterSayHi(Robot bob){
-    // check that bob exists and distance is less than max range
-    if ((bob != null) && (distance(bob) < messageRange)) {
-      // build the message...
-      float[] args = new float[2]; 
-      args[0] = pos.x;
-      args[1] = pos.y; 
-      sendMessage(bob.who, HI_THERE, args);
-    }
-  }
-  
-  void harvesterSayHi(int id){
-      // build the message...
-      float[] args = new float[2]; 
-      args[0] = pos.x;
-      args[1] = pos.y;
-      sendMessage(id, HI_THERE, args);
-  }
-   // ---------- END OF COMMUNICATION SPECIFIC FUNCTIONS FOR RED_HARVESTER ------------//
-   
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1397,7 +929,7 @@ class RedRocketLauncher extends RocketLauncher {
     {
       if(energy<100) //if the rocket is lacking energy and will soon die, it disengages from the explorer
       {
-        //System.out.println("Rocket "+who+" : disengaging");
+        System.out.println("Rocket "+who+" : disengaging");
         float[] arg = new float[2];
         arg[0]=who;
         arg[1]=colour;
@@ -1580,8 +1112,6 @@ class RedRocketLauncher extends RocketLauncher {
       Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
       if(explorer!=null) //if an explorer is found, we request from it informations that will tell the rocket wether or not a coalition can be formed
       {
-        //System.out.println("Rocket "+who+" : sending link message request to explorer "+explorer.who);
-
         float[] arg = new float[2];
         arg[0]=who;
         arg[1]=colour;
@@ -1639,14 +1169,14 @@ class RedRocketLauncher extends RocketLauncher {
       }
       else if(msg.type==13 && msg.args[1]==colour) //reception of dissolution message
       {
-        //System.out.println("Rocket "+who+" : received dissolution message from Explorer "+msg.args[0]);
+        System.out.println("Rocket "+who+" : received dissolution message from Explorer "+msg.args[0]);
         brain[1].z=0;
         acquaintances[1]=-1;
       }
       else if(msg.type == 181 && msg.args[5]==colour) //reception of explorer coalition informations
       {
         System.out.println("Rocket "+who+" : received coalition informations from Explorer "+msg.args[0]);
-        if(msg.args[1]<2 && msg.args[2]!=1) //if the received information is valid, we form a coalition //ALEXANDRE NEEDS TO CHNAGE !=1 TO SOMETHING ELSE (PROBABLY ==1)
+        if(msg.args[1]<2 && msg.args[2]!=1) //if the received information is valid, we form a coalition
         {
           System.out.println("Rocket "+who+" : sending link message request to explorer "+msg.args[0]);
           float[] arg = new float[2];
