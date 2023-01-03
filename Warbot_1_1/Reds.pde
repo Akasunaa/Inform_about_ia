@@ -44,7 +44,7 @@ class RedBase extends Base {
     // 7 more harvesters to create
     brain[5].x = 7;
     brain[5].y = 4;
-    brain[5].z = 2;
+    brain[5].z = 4;
   }
   
   void chooseNewRobot(){
@@ -104,6 +104,20 @@ class RedBase extends Base {
     // if ennemy rocket launcher in the area of perception
     Robot bob = (Robot)minDist(perceiveRobots(ennemy, LAUNCHER));
     if (bob != null) {
+      // call for help
+      System.out.println("Base " + who + " is calling for help at " + pos.x + ", " + pos.y); 
+      float[] args = new float[2];
+      args[0] = bob.pos.x;
+      args[1] = bob.pos.y;
+      ArrayList<Robot> explorers = perceiveRobots(friend, EXPLORER);  
+      if (explorers != null) {
+        for (int i = 0; i < explorers.size(); i++) {
+          if (explorers.get(i).brain[1].z == 1) {
+             sendMessage(explorers.get(i).who, 14, args);
+         }
+        }
+      }
+      
       heading = towards(bob);
       // launch a faf if no friend robot on the trajectory...
       if (perceiveRobotsInCone(friend, heading) == null)
@@ -559,6 +573,13 @@ void go() {
           acquaintances[4]=(int)msg.args[0];
         }
       }
+      else if (msg.type == 14)  //tests if the message received is a call for help
+      {
+         System.out.println("Explorer : Received call for help from " + msg.alice + " at " + msg.args[0] + ", " + msg.args[1]);
+         brain[4].y = 1;
+         brain[0].x = msg.args[0];
+         brain[0].y = msg.args[1];
+      }
       else if(msg.type==15) //if the explorer receives a "disengage" message from one of its rocket launchers, it will remove it from its memory
       {
         System.out.println("Explorer "+who+" : disengage message received");
@@ -623,6 +644,23 @@ class RedHarvester extends Harvester {
         Base bob = (Base)minDist(myBases);
         if (bob != null) 
             bob.brain[5].x+=1;      
+    }
+    
+    Robot enemyLauncher = (Robot)minDist(perceiveRobots(ennemy, LAUNCHER));
+    if (enemyLauncher != null) {
+    // call for help
+      System.out.println("Harvester " + who + " is calling for help at " + pos.x + ", " + pos.y); 
+      float[] args = new float[2];
+      args[0] = enemyLauncher.pos.x;
+      args[1] = enemyLauncher.pos.y;
+      ArrayList<Robot> explorers = perceiveRobots(friend, EXPLORER);  
+      if (explorers != null) {
+        for (int i = 0; i < explorers.size(); i++) {
+          if (explorers.get(i).brain[1].z == 1) {
+             sendMessage(explorers.get(i).who, 14, args);
+          }
+        }
+      }
     }
     
     // check for the closest burger
