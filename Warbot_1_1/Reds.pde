@@ -39,49 +39,55 @@ class RedBase extends Base {
   // > called at the creation of the base
   //
   void setup() {
-    // creates a new harvester
-    newHarvester();
-    // 7 more harvesters to create
-    brain[5].x = 7;
-    brain[5].z = 2;
+    // 6 harvesters, 3 explorers, 2 rockets launchers
+    brain[5].x = 6;
+    brain[5].z = 3;
+    brain[5].y = 2;
   }
   
   void chooseNewRobot(){
     // creates new robots depending on energy and the state of brain[5]
     if ((brain[5].x > 0) && (energy >= 1000 + harvesterCost)) {
       // 1st priority = creates harvesters 
-      if (newHarvester())
-        brain[5].x--;
+      if (newHarvester()){
+          brain[5].x--;
+      }
     } else if ((brain[5].y > 0) && (energy >= 1000 + launcherCost)) {
       // 2nd priority = creates rocket launchers 
-      if (newRocketLauncher())
-        brain[5].y--;
+      if (newRocketLauncher()){
+          brain[5].y--;
+       }
     } else if ((brain[5].z > 0) && (energy >= 1000 + explorerCost)) {
       // 3rd priority = creates explorers 
-      if (newExplorer())
+      if (newExplorer()){
         brain[5].z--;
+      }     
     } 
-    //No priority : random
-    else if (energy > 12000) {
-      ArrayList seeds = perceiveSeeds(friend);
-      ArrayList robots = perceiveRobots(friend, HARVESTER);
+    else if(energy>5000){
+        ArrayList seeds = perceiveSeeds(friend);
+        ArrayList robots = perceiveRobots(friend, HARVESTER);
+        if(seeds!=null && robots!=null){
+          if(seeds.size()>150 && robots.size()>4){ //lot of seed and harvester -> Rocket Launcher
+              newRocketLauncher();
+              System.out.println("new rocket");
 
-      if(seeds!=null && robots!=null)
-          if(seeds.size()>150 && robots.size()>4) //lot of harvest
-            brain[5].y++;
-          else if(seeds.size()<50)
-            brain[5].x++;        
-      // if no robot in the pipe and enough energy 
-      else if ((int)random(2) == 0)
-        // creates a new harvester with 50% chance
-        brain[5].x++;
-      else if ((int)random(2) == 0)
-        // creates a new rocket launcher with 25% chance
-        brain[5].y++;
-      else
-        // creates a new explorer with 25% chance
-        brain[5].z++;
+            }
+          else if(seeds.size()<50){ //no seed -> Harvester 
+              newHarvester();
+              System.out.println("new harv");
+}
+          else{ //is ok : explo
+              newExplorer();
+              System.out.println("new explo");
+
+            }
+        }  
+        newHarvester();
+        System.out.println("new harv");
+
     }
+   
+
   }
 
   //
@@ -177,12 +183,6 @@ class RedExplorer extends Explorer {
   // > defines the behavior of the agent
   //
 void go() {
-    //if die
-    if(energy<50){
-        Base bob = (Base)minDist(myBases);
-        if (bob != null) 
-            bob.brain[5].z+=1;      
-    }
   handleMessages();
     // if food to deposit or too few energy
     if ((carryingFood > 200) || (energy < 100))
@@ -197,19 +197,19 @@ void go() {
       if(energy<20) //if the explorer has too low of an energy and its going to die, we dissolve the coalition
       {
         //DISSOLVE COALITION
-        System.out.println("Explorer : dissolving coalition");
+        //System.out.println("Explorer : dissolving coalition");
         float[] arg = new float[1];
         arg[0]=who;
         if(acquaintances[3]!=0)
         { 
-          System.out.println("Explorer : sending dissolve coalition message to rocket "+acquaintances[3]);
+          //System.out.println("Explorer : sending dissolve coalition message to rocket "+acquaintances[3]);
           sendMessage(acquaintances[3], 13, arg);
           acquaintances[3]=-1;
           brain[1].x--;  
         }
         if(acquaintances[4]!=0)
         {
-          System.out.println("Explorer : sending dissolve coalition message to rocket "+acquaintances[4]);
+          //System.out.println("Explorer : sending dissolve coalition message to rocket "+acquaintances[4]);
           sendMessage(acquaintances[4], 13, arg);
           acquaintances[4]=-1;
           brain[1].x--;
@@ -535,16 +535,16 @@ void go() {
       // if "leader position update" message
       if (msg.type == 11) //tests if the message received is a position update demand from a rocket 
       {
-        System.out.println("Explorer : position update demand received");
+        //System.out.println("Explorer : position update demand received");
         float[] arg = new float[2];
         arg[0]=pos.x;
         arg[1]=pos.y;
-        System.out.println("Explorer : sending position update");
+        //System.out.println("Explorer : sending position update");
         sendMessage((int)msg.args[0],10,arg); //sending msg to rocket
       }
       else if(msg.type == 12) //tests if the message received is a link-up demand
       {
-        System.out.println("Explorer : link-up demand received");
+        //System.out.println("Explorer : link-up demand received");
         speed = launcherSpeed;
         brain[1].z = 1; //indicates that the explorer is part of the coalition formed by (this) rocket
         brain[1].x++;
@@ -603,11 +603,6 @@ class RedHarvester extends Harvester {
   void go() {
     // handle messages received
     handleMessages();
-    if(energy<50){
-        Base bob = (Base)minDist(myBases);
-        if (bob != null) 
-            bob.brain[5].x+=1;      
-    }
     
     // check for the closest burger
     Burger b = (Burger)minDist(perceiveBurgers());
@@ -829,11 +824,6 @@ class RedRocketLauncher extends RocketLauncher {
   // > defines the behavior of the agent
   //
   void go() {
-    if(energy<50){
-        Base bob = (Base)minDist(myBases);
-        if (bob != null) 
-            bob.brain[5].y+=1;      
-    }
     // if no energy or no bullets
     if ((energy < 100) || (bullets == 0))
       // go back to the base
@@ -1010,7 +1000,7 @@ class RedRocketLauncher extends RocketLauncher {
       Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
       if(explorer!=null && explorer.brain[1].x<2) //right now, we only test if explorer exists && has less than 2 ppl in squad
       {
-        System.out.println("Rocket : sending link message request to explorer "+explorer.who);
+        //System.out.println("Rocket : sending link message request to explorer "+explorer.who);
         float[] arg = new float[1];
         arg[0]=who;
         acquaintances[1]=explorer.who; //we save in the acquaintances the id of the explorer
