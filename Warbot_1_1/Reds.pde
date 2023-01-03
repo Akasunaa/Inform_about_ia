@@ -111,9 +111,10 @@ class RedBase extends Base {
     if (bob != null) {
       // call for help
       System.out.println("Base " + who + " is calling for help at " + pos.x + ", " + pos.y); 
-      float[] args = new float[2];
+      float[] args = new float[3];
       args[0] = bob.pos.x;
       args[1] = bob.pos.y;
+      args[2] = colour;
       ArrayList<Robot> explorers = perceiveRobots(friend, EXPLORER);  
       if (explorers != null) {
         for (int i = 0; i < explorers.size(); i++) {
@@ -575,14 +576,14 @@ void go() {
           acquaintances[4]=(int)msg.args[0];
         }
       }
-      else if (msg.type == 14)  //tests if the message received is a call for help
+      else if (msg.type == 14 && msg.args[2] == colour)  //tests if the message received is a call for help
       {
          System.out.println("Explorer : Received call for help from " + msg.alice + " at " + msg.args[0] + ", " + msg.args[1]);
          brain[4].y = 1;
          brain[0].x = msg.args[0];
          brain[0].y = msg.args[1];
       }
-      else if(msg.type==15 && msg.args[1]==colour) //if the explorer receives a "disengage" message from one of its rocket launchers, it will remove it from its memory
+      else if(msg.type == 15 && msg.args[1] == colour) //if the explorer receives a "disengage" message from one of its rocket launchers, it will remove it from its memory
       {
         System.out.println("Explorer "+who+" : disengage message received");
         //we store in acquaintances 3 and 4 the id of the rockets of the coalition
@@ -647,9 +648,10 @@ class RedHarvester extends Harvester {
     if (enemyLauncher != null) {
     // call for help
       System.out.println("Harvester " + who + " is calling for help at " + pos.x + ", " + pos.y); 
-      float[] args = new float[2];
+      float[] args = new float[3];
       args[0] = enemyLauncher.pos.x;
       args[1] = enemyLauncher.pos.y;
+      args[2] = colour;
       ArrayList<Robot> explorers = perceiveRobots(friend, EXPLORER);  
       if (explorers != null) {
         for (int i = 0; i < explorers.size(); i++) {
@@ -1069,7 +1071,7 @@ class RedRocketLauncher extends RocketLauncher {
   {
     // try to find a suitable coalition leader :
       Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
-      if(explorer!=null && explorer.brain[1].x<2 && explorer.brain[4].z!=1) //right now, we only test if explorer exists && has less than 2 ppl in squad && is not in other coalition
+      if(explorer!=null && explorer.brain[1].x<2 && explorer.brain[4].z!=1) //we test if explorer exists && has less than 2 ppl in squad && is not in other coalition
       {
         System.out.println("Rocket "+who+" : sending link message request to explorer "+explorer.who);
         float[] arg = new float[2];
