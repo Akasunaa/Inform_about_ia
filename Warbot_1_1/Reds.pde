@@ -554,6 +554,9 @@ class RedHarvester extends Harvester {
   // > called at the creation of the agent
   //
   void setup() {
+    Base base = (Base)minDist(myBases);
+    brain[4].x = base.pos.x;
+    brain[4].y = base.pos.y;
   }
 
   //
@@ -800,13 +803,8 @@ class RedRocketLauncher extends RocketLauncher {
     if ((energy < 100) || (bullets == 0))
       // go back to the base
       brain[4].x = 1;
-
-    if (brain[4].x == 1) 
-    {
-      // if in "go back to base" mode
-      goBackToBase();
-    } 
-    else if(brain[1].z==1) //SQUAD BEHAVIOR
+    
+    if(brain[1].z==1) //SQUAD BEHAVIOR
     {
       UpdateExplorer(); //updates position with explorer's
       // handle messages received
@@ -833,20 +831,32 @@ class RedRocketLauncher extends RocketLauncher {
       {
         return; //if a leader's been found, we avoid doing the standard alone behavior
       }
-      // try to find a target
-      selectTarget();
-      // if target identified
-      if (target())
+      
+      Base base = (Base)minDist(myBases);
+      if (distance(base) > basePerception + explorerPerception) {
+        // if too far from base go back to it and defend it
+        brain[4].x = 1;
+      } else {
+        // try to find a target
+        selectTarget();
+        // if target identified
+        if (target())
+        {
+          // shoot on the target
+          launchBullet(towards(brain[0]));
+        }
+        else
+        {
+          // else explore randomly
+          randomMove(45);
+        }
+      }      
+      
+      if (brain[4].x == 1) 
       {
-        // shoot on the target
-        launchBullet(towards(brain[0]));
-      }
-      else
-      {
-        // else explore randomly
-        randomMove(45);
-      }
-        
+        // if in "go back to base" mode
+        goBackToBase();
+      } 
     }
   }
 
