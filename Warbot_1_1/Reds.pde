@@ -1040,7 +1040,7 @@ class RedRocketLauncher extends RocketLauncher {
   {
     // try to find a suitable coalition leader :
       Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
-      if(explorer!=null && explorer.brain[1].x<2) //right now, we only test if explorer exists && has less than 2 ppl in squad
+      if(explorer!=null && explorer.brain[1].x<2 && explorer.brain[4].z!=1) //right now, we only test if explorer exists && has less than 2 ppl in squad && is not in other coalition
       {
         System.out.println("Rocket "+who+" : sending link message request to explorer "+explorer.who);
         float[] arg = new float[1];
