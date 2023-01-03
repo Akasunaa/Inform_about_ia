@@ -589,6 +589,9 @@ class RedHarvester extends Harvester {
   // > called at the creation of the agent
   //
   void setup() {
+    Base base = (Base)minDist(myBases);
+    brain[4].x = base.pos.x;
+    brain[4].y = base.pos.y;
   }
 
   //
@@ -605,37 +608,53 @@ class RedHarvester extends Harvester {
         if (bob != null) 
             bob.brain[5].x+=1;      
     }
+    
     // check for the closest burger
     Burger b = (Burger)minDist(perceiveBurgers());
     if ((b != null) && (distance(b) <= 2))
       // if one is found next to the robot, collect it
       takeFood(b);
-
-    // if food to deposit or too few energy
-    if ((carryingFood > 200) || (energy < 100))
-      // time to go back to the base
-      brain[4].x = 1;
-
-    // if in "go back" state
-    if (brain[4].x == 1) {
-      // go back to the base
-      goBackToBase();
-
-      // if enough energy and food
-      if ((energy > 100) && (carryingFood > 100)) {
-        // check for closest base
-        Base bob = (Base)minDist(myBases);
-        if (bob != null) {
-          // if there is one and the harvester is in the sphere of perception of the base
-          if (distance(bob) < basePerception)
-            // plant one burger as a seed to produce new ones
-            plantSeed();
-        }
+    
+    if (brain[1].z == 0) {
+      // Harvester is out of the coalition
+      
+      Base base = (Base)minDist(myBases);
+      if (base != null) {
+      // if there is one
+      if (distance(base) > basePerception + harvesterPerception) {
+        brain[4].x = 1;
       }
-    } else
-      // if not in the "go back" state, explore and collect food
-      goAndEat();
-  }
+        
+        // if food to deposit or too few energy
+      if ((carryingFood > 200) || (energy < 100))
+        // time to go back to the base
+        brain[4].x = 1;
+  
+      // if in "go back" state
+      if (brain[4].x == 1) {
+        // go back to the base
+        goBackToBase();
+  
+        // if enough energy and food
+        if ((energy > 100) && (carryingFood > 100)) {
+          // check for closest base
+          Base bob = (Base)minDist(myBases);
+          if (bob != null) {
+            // if there is one and the harvester is in the sphere of perception of the base
+            if (distance(bob) < basePerception)
+              // plant one burger as a seed to produce new ones
+              plantSeed();
+          }
+        }
+      } else
+        // if not in the "go back" state, explore and collect food
+        goAndEat();
+      }
+    } else if (brain[1].z == 1) {
+      // Harvester is in a the coalition
+      
+    }
+}
 
   //
   // goBackToBase
@@ -819,13 +838,8 @@ class RedRocketLauncher extends RocketLauncher {
     if ((energy < 100) || (bullets == 0))
       // go back to the base
       brain[4].x = 1;
-
-    if (brain[4].x == 1) 
-    {
-      // if in "go back to base" mode
-      goBackToBase();
-    } 
-    else if(brain[1].z==1) //SQUAD BEHAVIOR
+    
+    if(brain[1].z==1) //SQUAD BEHAVIOR
     {
       UpdateExplorer(); //updates position with explorer's
       // handle messages received
@@ -852,20 +866,32 @@ class RedRocketLauncher extends RocketLauncher {
       {
         return; //if a leader's been found, we avoid doing the standard alone behavior
       }
-      // try to find a target
-      selectTarget();
-      // if target identified
-      if (target())
+      
+      Base base = (Base)minDist(myBases);
+      if (distance(base) > basePerception + explorerPerception) {
+        // if too far from base go back to it and defend it
+        brain[4].x = 1;
+      } else {
+        // try to find a target
+        selectTarget();
+        // if target identified
+        if (target())
+        {
+          // shoot on the target
+          launchBullet(towards(brain[0]));
+        }
+        else
+        {
+          // else explore randomly
+          randomMove(45);
+        }
+      }      
+      
+      if (brain[4].x == 1) 
       {
-        // shoot on the target
-        launchBullet(towards(brain[0]));
-      }
-      else
-      {
-        // else explore randomly
-        randomMove(45);
-      }
-        
+        // if in "go back to base" mode
+        goBackToBase();
+      } 
     }
   }
 
