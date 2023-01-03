@@ -598,6 +598,18 @@ void go() {
           brain[1].x--;
         }
       }
+      else if(msg.type == 180 && msg.args[1]==colour) //if the explorer receives a "request coalition informations" message from one rocket that requests the informations from the explorer
+      {
+        System.out.println("Explorer "+who+" : receiving request for coalition informations");
+        float[] arg = new float[6];
+        arg[0]=who;
+        arg[1]=brain[1].x;
+        arg[2]=brain[4].z;
+        arg[3]=pos.x;
+        arg[4]=pos.y;
+        arg[5]=colour;
+        sendMessage((int)msg.args[0], 181, arg); //sends the requested informations to the rocket
+      }
     }
     // clear the message queue
     flushMessages();
@@ -925,6 +937,8 @@ class RedRocketLauncher extends RocketLauncher {
     }
     else //STANDARD ALONE BEHAVIOR
     {
+      // handle messages received
+      handleMessages();
       if(FindExplorer())//when alone, a rocket will try to find an explorer to link to
       {
         return; //if a leader's been found, we avoid doing the standard alone behavior
@@ -1071,17 +1085,13 @@ class RedRocketLauncher extends RocketLauncher {
   {
     // try to find a suitable coalition leader :
       Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
-      if(explorer!=null && explorer.brain[1].x<2 && explorer.brain[4].z!=1) //we test if explorer exists && has less than 2 ppl in squad && is not in other coalition
+      if(explorer!=null) //if an explorer is found, we request from it informations that will tell the rocket wether or not a coalition can be formed
       {
-        System.out.println("Rocket "+who+" : sending link message request to explorer "+explorer.who);
         float[] arg = new float[2];
         arg[0]=who;
         arg[1]=colour;
-        acquaintances[1]=explorer.who; //we save in the acquaintances the id of the explorer
-        brain[1].x = explorer.pos.x;
-        brain[1].y = explorer.pos.y;
-        brain[1].z = 1;
-        sendMessage(explorer.who, 12, arg); //send a link-up request message is sent to the explorer
+        System.out.println("Rocket "+who+" : sending request for coalition information from the explorer");
+        sendMessage(explorer.who, 180, arg); //we try to send a message to an explorer in the vicinity to obtain informations
         return true;
       }
       return false;
@@ -1137,6 +1147,22 @@ class RedRocketLauncher extends RocketLauncher {
         System.out.println("Rocket "+who+" : received dissolution message from Explorer "+msg.args[0]);
         brain[1].z=0;
         acquaintances[1]=-1;
+      }
+      else if(msg.type == 181 && msg.args[5]==colour) //reception of explorer coalition informations
+      {
+        System.out.println("Rocket "+who+" : received coalition informations from Explorer "+msg.args[0]);
+        if(msg.args[1]<2 && msg.args[2]!=1) //if the received information is valid, we form a coalition
+        {
+          System.out.println("Rocket "+who+" : sending link message request to explorer "+msg.args[0]);
+          float[] arg = new float[2];
+          arg[0]=who;
+          arg[1]=colour;
+          acquaintances[1]=(int)msg.args[0];//we save in the acquaintances the id of the explorer
+          brain[1].x = msg.args[3];
+          brain[1].y = msg.args[4];
+          brain[1].z = 1;
+          sendMessage((int)msg.args[0], 12, arg); //send a link-up request message is sent to the explorer
+        }
       }
     }
     // clear the message queue
