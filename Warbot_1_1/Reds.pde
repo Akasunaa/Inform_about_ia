@@ -64,8 +64,8 @@ class RedBase extends Base {
       }     
     } 
     else if(energy>5000){
-        ArrayList seeds = perceiveSeeds(friend);
-        ArrayList robots = perceiveRobots(friend, HARVESTER);
+        ArrayList<Seed> seeds = perceiveSeeds(friend);
+        ArrayList<Robot> robots = perceiveRobots(friend, HARVESTER);
         if(seeds!=null && robots!=null){
           if(seeds.size()>150 && robots.size()>4){ //lot of seed and harvester -> Rocket Launcher
               newRocketLauncher();
@@ -75,16 +75,14 @@ class RedBase extends Base {
           else if(seeds.size()<50){ //no seed -> Harvester 
               newHarvester();
               System.out.println("new harv");
-}
+          }
           else{ //is ok : explo
               newExplorer();
               System.out.println("new explo");
-
             }
         }  
         newHarvester();
         System.out.println("new harv");
-
     }
    
 
@@ -110,7 +108,7 @@ class RedBase extends Base {
     Robot bob = (Robot)minDist(perceiveRobots(ennemy, LAUNCHER));
     if (bob != null) {
       // call for help
-      System.out.println("Base " + who + " is calling for help at " + pos.x + ", " + pos.y); 
+      //System.out.println("Base " + who + " is calling for help at " + pos.x + ", " + pos.y); 
       float[] args = new float[2];
       args[0] = bob.pos.x;
       args[1] = bob.pos.y;
@@ -218,14 +216,14 @@ void go() {
         arg[1]=colour;
         if(acquaintances[3]>=0)
         { 
-          System.out.println("Explorer "+who+" : sending dissolve coalition message to rocket "+acquaintances[3]);
+          //System.out.println("Explorer "+who+" : sending dissolve coalition message to rocket "+acquaintances[3]);
           sendMessage(acquaintances[3], 13, arg);
           acquaintances[3]=-1;
           brain[1].x--;  
         }
         if(acquaintances[4]>=0)
         {
-          System.out.println("Explorer "+who+" : sending dissolve coalition message to rocket "+acquaintances[4]);
+          //System.out.println("Explorer "+who+" : sending dissolve coalition message to rocket "+acquaintances[4]);
           sendMessage(acquaintances[4], 13, arg);
           acquaintances[4]=-1;
           brain[1].x--;
@@ -252,10 +250,17 @@ void go() {
     }
     else //STANDALONE BEHAVIOR
     {
+      
+      ArrayList<Seed> seeds = perceiveSeeds(ennemy);
       if (brain[4].x == 1) {
         // go back to base...
         goBackToBase();
-      } else {
+      }
+      else if(seeds!=null){//Pietinement
+        heading = towards(seeds.get(0))+random(-radians(20), radians(20));
+        tryToMoveForward();
+      }
+      else {
         // ...or explore randomly
         randomMove(45);
       }
@@ -561,7 +566,7 @@ void go() {
       }
       else if(msg.type == 12 && msg.args[1]==colour) //tests if the message received is a link-up demand
       {
-        System.out.println("Explorer "+who+": link-up demand received");
+        //System.out.println("Explorer "+who+": link-up demand received");
         speed = launcherSpeed;
         brain[1].z = 1; //indicates that the explorer is part of the coalition formed by (this) rocket
         brain[1].x++;
@@ -584,7 +589,7 @@ void go() {
       }
       else if(msg.type==15 && msg.args[1]==colour) //if the explorer receives a "disengage" message from one of its rocket launchers, it will remove it from its memory
       {
-        System.out.println("Explorer "+who+" : disengage message received");
+        //System.out.println("Explorer "+who+" : disengage message received");
         //we store in acquaintances 3 and 4 the id of the rockets of the coalition
         if(acquaintances[3]==msg.args[0]) 
         {
@@ -643,10 +648,11 @@ class RedHarvester extends Harvester {
     // handle messages received
     handleMessages();
     
+    // COALITION OR STANDALONE : Call for help
     Robot enemyLauncher = (Robot)minDist(perceiveRobots(ennemy, LAUNCHER));
     if (enemyLauncher != null) {
-    // call for help
-      System.out.println("Harvester " + who + " is calling for help at " + pos.x + ", " + pos.y); 
+
+      //System.out.println("Harvester " + who + " is calling for help at " + pos.x + ", " + pos.y); 
       float[] args = new float[2];
       args[0] = enemyLauncher.pos.x;
       args[1] = enemyLauncher.pos.y;
@@ -660,12 +666,13 @@ class RedHarvester extends Harvester {
       }
     }
     
-    // check for the closest burger
+    //COALITION OR STANDALONE : Search for burger
     Burger b = (Burger)minDist(perceiveBurgers());
     if ((b != null) && (distance(b) <= 2))
       // if one is found next to the robot, collect it
       takeFood(b);
     
+    //STANDALONE
     if (brain[1].z == 0) {
       // Harvester is out of the coalition
       
@@ -685,7 +692,6 @@ class RedHarvester extends Harvester {
       if (brain[4].x == 1) {
         // go back to the base
         goBackToBase();
-  
         // if enough energy and food
         if ((energy > 100) && (carryingFood > 100)) {
           // check for closest base
@@ -697,11 +703,15 @@ class RedHarvester extends Harvester {
               plantSeed();
           }
         }
-      } else
+      }
+      
+      else
         // if not in the "go back" state, explore and collect food
         goAndEat();
       }
-    } else if (brain[1].z == 1) {
+    } 
+    //COALITION
+    else if (brain[1].z == 1) {
       // Harvester is in a the coalition
       
     }
@@ -890,7 +900,7 @@ class RedRocketLauncher extends RocketLauncher {
     {
       if(energy<100) //if the rocket is lacking energy and will soon die, it disengages from the explorer
       {
-        System.out.println("Rocket "+who+" : disengaging");
+        //System.out.println("Rocket "+who+" : disengaging");
         float[] arg = new float[2];
         arg[0]=who;
         arg[1]=colour;
@@ -1071,7 +1081,7 @@ class RedRocketLauncher extends RocketLauncher {
       Explorer explorer = (Explorer)oneOf(perceiveRobots(friend,EXPLORER));
       if(explorer!=null && explorer.brain[1].x<2 && explorer.brain[4].z!=1) //right now, we only test if explorer exists && has less than 2 ppl in squad && is not in other coalition
       {
-        System.out.println("Rocket "+who+" : sending link message request to explorer "+explorer.who);
+        //System.out.println("Rocket "+who+" : sending link message request to explorer "+explorer.who);
         float[] arg = new float[2];
         arg[0]=who;
         arg[1]=colour;
@@ -1132,7 +1142,7 @@ class RedRocketLauncher extends RocketLauncher {
       }
       else if(msg.type==13 && msg.args[1]==colour) //reception of dissolution message
       {
-        System.out.println("Rocket "+who+" : received dissolution message from Explorer "+msg.args[0]);
+        //System.out.println("Rocket "+who+" : received dissolution message from Explorer "+msg.args[0]);
         brain[1].z=0;
         acquaintances[1]=-1;
       }
