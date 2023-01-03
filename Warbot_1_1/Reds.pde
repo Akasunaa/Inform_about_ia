@@ -8,25 +8,25 @@
 
 //------CUSTOM MESSAGE FOR THE RED TEAM ARE DEFINED HERE----------//
   
-  final int ASK_FOR_JOINING_COALITION = 5;
+  final int ASK_FOR_JOINING_COALITION = 1000;
   // message used to invite someone to a coalition. It goes hand in hand with multiples arguments. 
   // arg[0] : type of coalition 
   // arg[1] : role offered for this coalition 
   
-  final int RESPOND_TO_COALITION_OFFER = 6;
+  final int RESPOND_TO_COALITION_OFFER = 1001;
   //message used in order to accept or decline a coalition offer. 
   // args[0] : 0 = Refusal | 1 = Compliance
   
-  final int CONFIRM_COALITION_FORMATION =  7; 
+  final int CONFIRM_COALITION_FORMATION =  1002; 
   //message used in order to confirm the creation of the coalition. 
   // arg[0] : type of coalition 
   // arg[1] : role in this coalition, depending on the type of coalition 
   
-  final int INFORM_ABOUT_DISSOLVING_COALITION = 8;
+  final int INFORM_ABOUT_DISSOLVING_COALITION = 1003;
   // message used in order to dissolve a coalition. If the transmitter and the receiver belong to the same coalition, the coalition is canceled and the receiver transmit the message too. 
   // no specific arguments
   
-  final int HI_THERE = 9;
+  final int HI_THERE = 1004;
   //Message used in order to say hi to another unit. The main purpose of this is to regularly check if the members of a coalition is still alive and transmit its position to other
   //arg[0] = x coordinate of the emitting unit 
   //arg[1] = y coordinateof the emitting unit 
@@ -247,7 +247,7 @@ void go() {
       float dist = distance(base);
       
       if(dist > explorerPerception / 2){
-        goBackToBase();
+        goBackToBase();//while not in colation, stay near the base 
       } 
       
       else {
@@ -258,6 +258,8 @@ void go() {
         explorerConfirmCoalitionFormation(acquaintances[1], 2, 2); //same for nomad harvester 
         brain[2].z = 0; //recruitement is finished ! 
         brain[1].z = 2; //explorer belong to convey coalition now
+        explorerSayHi(acquaintances[0]); //say hi to sedentary haverster. 
+        explorerSayHi(acquaintances[1]); //say hi to nomad haverster. 
         } 
         
         else {
@@ -606,6 +608,33 @@ void go() {
       msg = messages.get(i);
       // if "localized target" message
       
+      if(msg.type == RESPOND_TO_COALITION_OFFER){
+          p.x = msg.args[0]; //response to the  offer ...
+          
+          if(p.x == 1){
+            
+            if(msg.alice == acquaintances[0]){ //.. from the potential sedentary 
+              
+              if(brain[2].z == 0){
+                brain[2].z = 1; // the sedentary havester is the first to accept
+              } else if (brain[2].z == 2){
+                brain[2].z = 3; //the sedentary haverster is the second to accept
+              }
+              
+            } else if (msg.alice == acquaintances[1]){ //... from the potentiel nomad
+              
+              if(brain[2].z == 0){
+                brain[2].z = 2; // the nomad havester is the first to accept
+              } else if (brain[2].z == 1){
+                brain[2].z = 3; //the nomad haverster is the second to accept
+              }
+            
+            }
+            
+          }
+            
+        }
+      
       if(msg.type == HI_THERE){
           p.x = msg.args[0]; //x coordinate of alice
           p.y = msg.args[1]; //y coordinate of alice 
@@ -615,14 +644,12 @@ void go() {
               //update sedentary position : 
               brain[2].x = p.x;
               brain[2].y = p.y;
-              explorerSayHi(msg.alice); //say hi back to sendentary haverster. 
               } 
             if(msg.alice == acquaintances[1]){ // if the one to say HI is the nomad haverster
               // TODO : reset coalition expiration timer 
               //update nomad position : 
               brain[1].x = p.x;
               brain[1].y = p.y;
-              explorerSayHi(msg.alice); //say hi back to nomad haverster. 
             }
           }
             
@@ -962,6 +989,7 @@ class RedHarvester extends Harvester {
             brain[1].z = 1; // register the coalition 
             brain[4].z = p.y; //register its new responsibilities (sendentary or nomad)
             acquaintances[0] = msg.alice; //register the id of the chief explorer 
+            harvesterSayHi(acquaintances[0]); //say hi to chief in order to transmit initial position 
             } 
         }
         
