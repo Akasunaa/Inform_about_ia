@@ -10,26 +10,30 @@
   
   final int ASK_FOR_JOINING_COALITION = 1000;
   // message used to invite someone to a coalition. It goes hand in hand with multiples arguments. 
-  // arg[0] : type of coalition 
-  // arg[1] : role offered for this coalition 
+  // args[0] : type of coalition 
+  // args[1] : role offered for this coalition 
+  // args[2] : colour to secure the message
   
   final int RESPOND_TO_COALITION_OFFER = 1001;
   //message used in order to accept or decline a coalition offer. 
   // args[0] : 0 = Refusal | 1 = Compliance
+  // args[1] : colour to secure the message
   
   final int CONFIRM_COALITION_FORMATION =  1002; 
   //message used in order to confirm the creation of the coalition. 
   // arg[0] : type of coalition 
-  // arg[1] : role in this coalition, depending on the type of coalition 
+  // arg[1] : role in this coalition, depending on the type of coalition
+  // args[2] : colour to secure the message
   
   final int INFORM_ABOUT_DISSOLVING_COALITION = 1003;
   // message used in order to dissolve a coalition. If the transmitter and the receiver belong to the same coalition, the coalition is canceled and the receiver transmit the message too. 
-  // no specific arguments
+  // args[0] : colour to secure the message
   
   final int HI_THERE = 1004;
   //Message used in order to say hi to another unit. The main purpose of this is to regularly check if the members of a coalition is still alive and transmit its position to other
   //arg[0] = x coordinate of the emitting unit 
   //arg[1] = y coordinateof the emitting unit 
+  //args[2] : colour to secure the message
 
 //------END OF CUSTOM MESSAGE DEFINITION ----------//
 
@@ -97,12 +101,12 @@ class RedBase extends Base {
         ArrayList<Seed> seeds = perceiveSeeds(friend);
         ArrayList<Robot> robots = perceiveRobots(friend, HARVESTER);
         if(seeds!=null && robots!=null){
-          if(seeds.size()>150 && robots.size()>4){ //lot of seed and harvester -> Rocket Launcher
+          if(seeds.size()>70 && robots.size()>4){ //lot of seed and harvester -> Rocket Launcher
               newRocketLauncher();
               System.out.println("new rocket");
 
             }
-          else if(seeds.size()<50){ //no seed -> Harvester 
+          else if(seeds.size()<40){ //no seed -> Harvester 
               newHarvester();
               System.out.println("new harv");
           }
@@ -215,6 +219,10 @@ class RedBase extends Base {
 //   2.x / 2.y [if chief of a convey coalition] = last coordinate of the sedentary harvester  
 //   2.z =  waiting for coalition to complete (0 = no proposal; 1 = First only say yes; 2 = second only say yes ; 3 = both accepted) 
 //
+//   3.x = coalition expiration default duration;
+//   3.y = current coalition timer ;
+//   3.z = coalition delta time between each tick for the timer ;
+//
 //map of the aquaintances:
 //   • if the explorer is a chief of convey coalition
 //     0 = id of the sedentary harvester
@@ -239,6 +247,9 @@ class RedExplorer extends Explorer {
   //
   void setup() {
     brain[1].x=0;
+    brain[3].x = 100;
+    brain[3].y = 100;
+    brain[3].z = 0.01;
   }
 
   //
@@ -308,11 +319,12 @@ void go() {
     {
       checkUponHarvesters();
       
-      if(carryingFood < 100){
+      if(carryingFood < 50){
         joinNomadHarvester();
       } else {
         joinSedentaryHarvester();
       }
+      decreaseCoalitionTimer(); //we decrease the coalition timer 
     } 
     
     else if ( brain[1].z == 0 && brain[4].z == 2){ //THE EXPLORER TYPE IS CONVEY CHIEF AND NOT IN A COALITION NOW
@@ -334,6 +346,7 @@ void go() {
         brain[1].z = 2; //explorer belong to convey coalition now
         explorerSayHi(acquaintances[0]); //say hi to sedentary haverster. 
         explorerSayHi(acquaintances[1]); //say hi to nomad haverster. 
+        System.out.println("YASSS, sendentary : " + acquaintances[0] + " | nomad : " + acquaintances[1]);
         } 
         
         else {
@@ -542,7 +555,10 @@ void go() {
   // > go found the nomad havester of the coalition until the explorer get enough food !
   //
   void joinNomadHarvester(){
-      heading = towards(brain[1]); 
+      PVector position = new PVector();
+      position.x = brain[1].x - 2;
+      position.y = brain[1].y - 2; 
+      heading = towards(position); 
       tryToMoveForward();
   }
   
@@ -552,7 +568,10 @@ void go() {
   // > go found the sedentary havester of the coalition until the explorer get close enough to give it previously collected food
   //
   void joinSedentaryHarvester(){ 
-      heading = towards(brain[2]); 
+      PVector position = new PVector();
+      position.x = brain[2].x - 2;
+      position.y = brain[2].y - 2; 
+      heading = towards(position);  
       tryToMoveForward();
       
       //check id the sedentary is perceived and close enough
@@ -581,6 +600,12 @@ void go() {
   void checkUponHarvesters(){
     explorerSayHi(acquaintances[0]);
     explorerSayHi(acquaintances[1]);
+  }
+  
+  void tryToMoveTowardOrWait() {
+    // if there is no obstacle ahead, move forward at full speed
+    if (freeAhead(speed))
+      forward(speed);
   }
 
   //
@@ -716,6 +741,17 @@ void go() {
       forward(speed);
   }
   
+  void decreaseCoalitionTimer(){
+    brain[3].y -= brain[3].z;
+    if(brain[3].y <= 0){
+      quitCoalition();
+    }
+  }
+  
+  void resetCoalitionTimer(){
+    brain[3].y = brain[3].x;
+  }
+  
   void quitCoalition(){
     brain[1].z = 0;
     brain[2].z = 0; // reset coalition proporsal if not done yet 
@@ -723,6 +759,7 @@ void go() {
       explorerDissolveCoalition(acquaintances[i]);
       acquaintances[i] = -1;
     }
+    resetCoalitionTimer();
   }
   
   //
@@ -738,7 +775,7 @@ void go() {
       // get next message
       msg = messages.get(i);
       
-      if(msg.type == RESPOND_TO_COALITION_OFFER){
+      if(msg.type == RESPOND_TO_COALITION_OFFER && msg.args[1] == colour){
           p.x = msg.args[0]; //response to the  offer ...
           
           if(p.x == 1){
@@ -765,16 +802,18 @@ void go() {
             
         }
       
-      if(msg.type == HI_THERE){
+      if(msg.type == HI_THERE && msg.args[2] == colour){
           p.x = msg.args[0]; //x coordinate of alice
           p.y = msg.args[1]; //y coordinate of alice 
           if(brain[4].z == 2){
             if(msg.alice == acquaintances[0]){ // if the one to say HI is the sedentary harvester :  
+              resetCoalitionTimer();
               //update sedentary position : 
               brain[2].x = p.x;
               brain[2].y = p.y;
               } 
             if(msg.alice == acquaintances[1]){ // if the one to say HI is the nomad haverster
+              resetCoalitionTimer();
               //update nomad position : 
               brain[1].x = p.x;
               brain[1].y = p.y;
@@ -783,7 +822,7 @@ void go() {
             
         }
         
-        if(msg.type == INFORM_ABOUT_DISSOLVING_COALITION){
+        if(msg.type == INFORM_ABOUT_DISSOLVING_COALITION && msg.args[0] == colour){
           quitCoalition();
         }
       
@@ -874,18 +913,20 @@ void go() {
     // check that bob exists and distance is less than max range
     if ((bob != null) && (distance(bob) < messageRange)) {
       // build the message...
-      float[] args = new float[2];
+      float[] args = new float[3];
       args[0] = coalitionType;
       args[1] = role ;  
+      args[2] = colour;
       sendMessage(bob.who, ASK_FOR_JOINING_COALITION, args);
     }
   }
   
   void explorerAskForJoiningCoalition(int id, int coalitionType, int role){
       // build the message...
-      float[] args = new float[2];
+      float[] args = new float[3];
       args[0] = coalitionType;
-      args[1] = role ;  
+      args[1] = role ;
+      args[2] = colour;
       sendMessage(id, ASK_FOR_JOINING_COALITION, args);
   }
   
@@ -894,18 +935,20 @@ void go() {
     // check that bob exists and distance is less than max range
     if ((bob != null) && (distance(bob) < messageRange)) {
       // build the message...
-      float[] args = new float[2];
+      float[] args = new float[3];
       args[0] = coalitionType;
       args[1] = finalRole;  
+      args[2] = colour;
       sendMessage(bob.who, CONFIRM_COALITION_FORMATION, args);
     }
   }
   
   void explorerConfirmCoalitionFormation(int id, int coalitionType, int finalRole){
       // build the message...
-      float[] args = new float[2];
+      float[] args = new float[3];
       args[0] = coalitionType;
       args[1] = finalRole;  
+      args[2] = colour;
       sendMessage(id, CONFIRM_COALITION_FORMATION, args);
   }
   
@@ -914,14 +957,16 @@ void go() {
     // check that bob exists and distance is less than max range
     if ((bob != null) && (distance(bob) < messageRange)) {
       // build the message...
-      float[] args = new float[0]; 
+      float[] args = new float[1]; 
+      args[0] = colour;
       sendMessage(bob.who, INFORM_ABOUT_DISSOLVING_COALITION, args);
     }
   }
   
    void explorerDissolveCoalition(int id){
       // build the message...
-      float[] args = new float[0]; 
+      float[] args = new float[1]; 
+      args[0] = colour;
       sendMessage(id, INFORM_ABOUT_DISSOLVING_COALITION, args);
   }
   
@@ -929,18 +974,20 @@ void go() {
     // check that bob exists and distance is less than max range
     if ((bob != null) && (distance(bob) < messageRange)) {
       // build the message...
-      float[] args = new float[2]; 
+      float[] args = new float[3]; 
       args[0] = pos.x;
       args[1] = pos.y; 
+      args[2] = colour;
       sendMessage(bob.who, HI_THERE, args);
     }
   }
   
   void explorerSayHi(int id){
       // build the message...
-      float[] args = new float[2]; 
+      float[] args = new float[3]; 
       args[0] = pos.x;
       args[1] = pos.y; 
+      args[2] = colour;
       sendMessage(id, HI_THERE, args);
   }
    // ---------- END COMMUNICATION SPECIFIC FUNCTIONS FOR RED_EXPLORER ------------//
@@ -956,7 +1003,13 @@ void go() {
 //   4.x = (0 = look for food | 1 = go back to base) 
 //   4.y = (0 = no food found | 1 = food found)
 //   4.z = harvester type (0 = basic | 1 = sendentary | 2 = nomad)
+
 //   1.z = type of coalition (0 = None | 1 = convey coalition)
+
+//   3.x = coalition expiration default duration;
+//   3.y = current coalition timer ;
+//   3.z = coalition delta time between each tick for the timer ;
+
 //   0.x / 0.y = position of the localized food
 //
 // map of the aquaintances:
@@ -981,6 +1034,9 @@ class RedHarvester extends Harvester {
     Base base = (Base)minDist(myBases);
     brain[4].x = base.pos.x;
     brain[4].y = base.pos.y;
+    brain[3].x = 100;
+    brain[3].y = 100;
+    brain[3].z = 0.01;
   }
 
   //
@@ -1048,6 +1104,8 @@ class RedHarvester extends Harvester {
       
         if(dist > basePerception){
           brain[4].x = 1; //if the sedentary haverster got too far, it's going back to base
+        } else {
+          goAndEat();
         }
         
       }
@@ -1080,6 +1138,7 @@ class RedHarvester extends Harvester {
         }
         
       }
+      decreaseCoalitionTimer();
     }
     else { // BASIC BEHAVIOR
     
@@ -1236,7 +1295,7 @@ class RedHarvester extends Harvester {
           }
       }
       
-        if(msg.type == ASK_FOR_JOINING_COALITION){
+        if(msg.type == ASK_FOR_JOINING_COALITION && msg.args[2] == colour){
           p.x = msg.args[0]; //type of coalition 
           p.y = msg.args[1]; //job offer 
           if(brain[1].z == 0){ // if not in a coalition 
@@ -1252,7 +1311,7 @@ class RedHarvester extends Harvester {
           }
         }
         
-        if(msg.type == CONFIRM_COALITION_FORMATION){
+        if(msg.type == CONFIRM_COALITION_FORMATION && msg.args[2] == colour){
           p.x = msg.args[0]; //type of coalition 
           p.y = msg.args[1]; //final job attribution  
           if(p.x == 2){ //convey coalition case 
@@ -1263,16 +1322,17 @@ class RedHarvester extends Harvester {
             } 
         }
         
-        if(msg.type == HI_THERE){
+        if(msg.type == HI_THERE && msg.args[2] == colour){
           p.x = msg.args[0]; //x coordinate of alice
           p.y = msg.args[1]; //y coordinate of alice 
           if(msg.alice == acquaintances[0]){ // if the one to say HI is the coalition chief : 
             // TODO : reset coalition expiration timer 
+            resetCoalitionTimer();
             harvesterSayHi(msg.alice); //say hi back to the chief. 
             } 
         }
         
-        if(msg.type == INFORM_ABOUT_DISSOLVING_COALITION){
+        if(msg.type == INFORM_ABOUT_DISSOLVING_COALITION && msg.args[0] == colour){
           quitCoalition();
         }
         
@@ -1282,11 +1342,23 @@ class RedHarvester extends Harvester {
     flushMessages();
   }
   
+  void decreaseCoalitionTimer(){
+    brain[3].y -= brain[3].z;
+    if(brain[3].y <= 0){
+      quitCoalition();
+    }
+  }
+  
+  void resetCoalitionTimer(){
+    brain[3].y = brain[3].x;
+  }
+  
   void quitCoalition(){
     brain[1].z = 0;
     brain[4].z = 0;
     for(int i = 0; i<acquaintances.length ; i++){
       acquaintances[i] = -1;
+      resetCoalitionTimer();
     }
   }
   
@@ -1297,16 +1369,18 @@ class RedHarvester extends Harvester {
     // check that bob exists and distance is less than max range
     if ((bob != null) && (distance(bob) < messageRange)) {
       // build the message...
-      float[] args = new float[1];
+      float[] args = new float[2];
       args[0] = accepted ? 1 : 0; 
+      args[1] = colour;
       sendMessage(bob.who, RESPOND_TO_COALITION_OFFER, args);
     }
   }
   
   void harvesterRespondToCoalitionOffer(int id, boolean accepted){
       // build the message...
-      float[] args = new float[1];
+      float[] args = new float[2];
       args[0] = accepted ? 1 : 0; 
+      args[1] = colour;
       sendMessage(id, RESPOND_TO_COALITION_OFFER, args);
   }
   
@@ -1316,14 +1390,16 @@ class RedHarvester extends Harvester {
     // check that bob exists and distance is less than max range
     if ((bob != null) && (distance(bob) < messageRange)) {
       // build the message...
-      float[] args = new float[0]; 
+      float[] args = new float[1]; 
+      args[0] = colour;
       sendMessage(bob.who, INFORM_ABOUT_DISSOLVING_COALITION, args);
     }
   }
   
    void harvesterDissolveCoalition(int id){
       // build the message...
-      float[] args = new float[0]; 
+      float[] args = new float[1]; 
+      args[0] = colour;
       sendMessage(id, INFORM_ABOUT_DISSOLVING_COALITION, args);
   }
   
@@ -1331,18 +1407,20 @@ class RedHarvester extends Harvester {
     // check that bob exists and distance is less than max range
     if ((bob != null) && (distance(bob) < messageRange)) {
       // build the message...
-      float[] args = new float[2]; 
+      float[] args = new float[3]; 
       args[0] = pos.x;
       args[1] = pos.y; 
+      args[2] = colour;
       sendMessage(bob.who, HI_THERE, args);
     }
   }
   
   void harvesterSayHi(int id){
       // build the message...
-      float[] args = new float[2]; 
+      float[] args = new float[3]; 
       args[0] = pos.x;
       args[1] = pos.y;
+      args[2] = colour;
       sendMessage(id, HI_THERE, args);
   }
    // ---------- END OF COMMUNICATION SPECIFIC FUNCTIONS FOR RED_HARVESTER ------------//
@@ -1646,7 +1724,7 @@ class RedRocketLauncher extends RocketLauncher {
       else if(msg.type == 181 && msg.args[5]==colour) //reception of explorer coalition informations
       {
         System.out.println("Rocket "+who+" : received coalition informations from Explorer "+msg.args[0]);
-        if(msg.args[1]<2 && msg.args[2]!=1) //if the received information is valid, we form a coalition //ALEXANDRE NEEDS TO CHNAGE !=1 TO SOMETHING ELSE (PROBABLY ==1)
+        if(msg.args[1]<2 && msg.args[2]!=1) //if the received information is valid, we form a coalition 
         {
           System.out.println("Rocket "+who+" : sending link message request to explorer "+msg.args[0]);
           float[] arg = new float[2];
